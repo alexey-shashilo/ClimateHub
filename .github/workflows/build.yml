@@ -53,7 +53,10 @@ jobs:
           find . -name "*.trx" -type f 2>&1
           exit "$ARCH_ECODE"
       - name: Unit Tests
-        run: dotnet test tests/ClimateHub.UnitTests --logger "trx;LogFileName=unit.trx"
+        run: |
+          for proj in tests/ClimateHub.Modules.*.UnitTests; do
+            if [ -d "$proj" ]; then dotnet test "$proj" --logger "trx;LogFileName=$(basename $proj).trx"; fi
+          done
       - name: Device Gateway Tests
         run: dotnet test tests/ClimateHub.DeviceGatewayTests --logger "trx;LogFileName=gateway.trx"
       - name: Runtime Metrics Tests
