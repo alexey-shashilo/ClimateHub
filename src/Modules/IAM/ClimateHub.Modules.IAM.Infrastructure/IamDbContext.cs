@@ -59,7 +59,10 @@ public class IamDbContext : DbContext
             e.ToTable("refresh_sessions");
             e.HasKey(x => x.Id);
             e.Property(x => x.RefreshToken).HasMaxLength(512).IsRequired();
-            e.HasIndex(x => x.RefreshToken).IsUnique();
+            e.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.Property(x => x.TokenFamilyId).IsRequired();
+            e.HasIndex(x => x.TokenFamilyId);
             e.Property(x => x.UserId).IsRequired();
         });
     }

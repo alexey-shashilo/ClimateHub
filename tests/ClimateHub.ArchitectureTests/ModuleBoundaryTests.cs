@@ -136,6 +136,166 @@ public class ModuleBoundaryTests
         Assert.NotNull(engCodesType.GetField("IncreaseTemperature", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static));
     }
 
+    [Fact]
+    public void CapabilityPlanner_References_EngineeringCapabilityCodes_NotDuplicateStrings()
+    {
+        var needToEngField = typeof(ClimateHub.Modules.Needs.Infrastructure.CapabilityPlanner)
+            .GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .FirstOrDefault(f => f.Name == "NeedToEngCapability" && f.FieldType == typeof(Dictionary<ClimateHub.Modules.Needs.Domain.NeedType, string>));
+
+        Assert.NotNull(needToEngField);
+
+        var dict = (System.Collections.IDictionary)needToEngField.GetValue(null)!;
+        foreach (var entry in dict.Values)
+        {
+            var value = entry?.GetType().GetProperty("Value")?.GetValue(entry) as string;
+            if (value is not null && value.StartsWith("eng."))
+            {
+                // All eng.* values should match a constant in EngineeringCapabilityCodes
+                var constantFound = typeof(EngineeringCapabilityCodes)
+                    .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                    .Where(f => f.FieldType == typeof(string))
+                    .Any(f => (string)f.GetValue(null)! == value);
+
+                Assert.True(constantFound,
+                    $"CapabilityPlanner uses '{value}' which is not a constant defined in EngineeringCapabilityCodes");
+            }
+        }
+    }
+
+    [Fact]
+    public void NoDuplicateCapabilityToFamilyMappings()
+    {
+        var resolver = new EngineeringCapabilityFamilyResolver();
+        var mappings = resolver.GetAllMappings();
+        var seen = new HashSet<string>();
+        foreach (var key in mappings.Keys)
+        {
+            Assert.True(seen.Add(key), $"Duplicate capability -> family mapping detected: {key}");
+        }
+    }
+
+    [Fact]
+    public async Task EndpointsWithRoomId_HaveRequireRoomAccessOrRequireBuildingAccess()
+    {
+        var endpointFiles = Directory.GetFiles(
+            Path.Combine(SolutionDir, "src", "ClimateHub.Api", "Endpoints"), "*.cs");
+
+        foreach (var file in endpointFiles)
+        {
+            var content = await File.ReadAllTextAsync(file);
+            var lines = content.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("\"{roomId}\"") || lines[i].Contains("\"{roomId}"))
+                {
+                    // Scan forward up to 20 lines to find the filter chain
+                    var chain = string.Join(" ", lines.Skip(i).Take(20));
+                    var hasAccess = chain.Contains("RequireRoomAccess") || chain.Contains("RequireBuildingAccess");
+                    Assert.True(hasAccess,
+                        $"File {Path.GetFileName(file)} line {i + 1}: route with {{roomId}} missing RequireRoomAccess or RequireBuildingAccess");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EndpointsWithDeviceId_HaveRequireDeviceAccessOrRequireBuildingAccess()
+    {
+        var endpointFiles = Directory.GetFiles(
+            Path.Combine(SolutionDir, "src", "ClimateHub.Api", "Endpoints"), "*.cs");
+
+        foreach (var file in endpointFiles)
+        {
+            var content = await File.ReadAllTextAsync(file);
+            var lines = content.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("\"{deviceId}\"") || lines[i].Contains("\"{deviceId}"))
+                {
+                    var chain = string.Join(" ", lines.Skip(i).Take(20));
+                    var hasAccess = chain.Contains("RequireDeviceAccess") || chain.Contains("RequireBuildingAccess");
+                    Assert.True(hasAccess,
+                        $"File {Path.GetFileName(file)} line {i + 1}: route with {{deviceId}} missing RequireDeviceAccess or RequireBuildingAccess");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EndpointsWithNeedId_HaveRequireNeedAccessOrRequireBuildingAccess()
+    {
+        var endpointFiles = Directory.GetFiles(
+            Path.Combine(SolutionDir, "src", "ClimateHub.Api", "Endpoints"), "*.cs");
+
+        foreach (var file in endpointFiles)
+        {
+            var content = await File.ReadAllTextAsync(file);
+            var lines = content.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("\"{needId}\"") || lines[i].Contains("\"{needId}"))
+                {
+                    var chain = string.Join(" ", lines.Skip(i).Take(20));
+                    var hasAccess = chain.Contains("RequireNeedAccess") || chain.Contains("RequireBuildingAccess");
+                    Assert.True(hasAccess,
+                        $"File {Path.GetFileName(file)} line {i + 1}: route with {{needId}} missing RequireNeedAccess or RequireBuildingAccess");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EndpointsWithCommandId_HaveRequireCommandAccess()
+    {
+        var endpointFiles = Directory.GetFiles(
+            Path.Combine(SolutionDir, "src", "ClimateHub.Api", "Endpoints"), "*.cs");
+
+        foreach (var file in endpointFiles)
+        {
+            var content = await File.ReadAllTextAsync(file);
+            var lines = content.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("\"{commandId}\"") || lines[i].Contains("\"{commandId}"))
+                {
+                    var chain = string.Join(" ", lines.Skip(i).Take(20));
+                    var hasAccess = chain.Contains("RequireCommandAccess");
+                    Assert.True(hasAccess,
+                        $"File {Path.GetFileName(file)} line {i + 1}: route with {{commandId}} missing RequireCommandAccess");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EndpointsWithBuildingId_HaveRequireBuildingAccess()
+    {
+        var endpointFiles = Directory.GetFiles(
+            Path.Combine(SolutionDir, "src", "ClimateHub.Api", "Endpoints"), "*.cs");
+
+        foreach (var file in endpointFiles)
+        {
+            var content = await File.ReadAllTextAsync(file);
+            var lines = content.Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains("\"{buildingId}\"") || lines[i].Contains("\"{buildingId}"))
+                {
+                    var chain = string.Join(" ", lines.Skip(i).Take(20));
+                    var hasAccess = chain.Contains("RequireBuildingAccess");
+                    Assert.True(hasAccess,
+                        $"File {Path.GetFileName(file)} line {i + 1}: route with {{buildingId}} missing RequireBuildingAccess");
+                }
+            }
+        }
+    }
+
     private List<ProjectReference> GetProjectReferences(string relativePath)
     {
         var fullPath = Path.GetFullPath(Path.Combine(SolutionDir, relativePath));

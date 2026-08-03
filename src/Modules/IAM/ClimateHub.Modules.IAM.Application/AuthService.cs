@@ -63,11 +63,13 @@ public class AuthService : IAuthService
 
         var accessToken = GenerateAccessToken(user, roles, permissions);
         var refreshToken = GenerateRefreshToken();
+        var tokenFamilyId = Guid.NewGuid();
 
         var refreshSession = new RefreshSession(
             Guid.NewGuid(),
             user.Id,
             refreshToken,
+            tokenFamilyId,
             DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays));
 
         await _refreshSessionRepository.AddAsync(refreshSession, ct);
@@ -91,13 +93,25 @@ public class AuthService : IAuthService
     public async Task<RefreshResponse> RefreshTokenAsync(RefreshRequest request, CancellationToken ct = default)
     {
         var session = await _refreshSessionRepository.GetByRefreshTokenAsync(request.RefreshToken, ct);
-        if (session is null || session.IsRevoked || session.IsExpired)
+
+        // Token theft detection: if token is revoked (already consumed or stolen), revoke entire family
+        if (session is null || session.IsRevoked)
+        {
+            if (session is not null)
+            {
+                await _refreshSessionRepository.RevokeFamilyAsync(session.TokenFamilyId, ct);
+            }
+            throw new UnauthorizedAccessException("Invalid or expired refresh token");
+        }
+
+        if (session.IsExpired)
             throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
         var user = await _userRepository.GetByIdAsync(session.UserId, ct);
         if (user is null || !user.IsActive)
             throw new UnauthorizedAccessException("User not found or inactive");
 
+        // Rotation enforcement: consume the old token
         session.Revoke();
         await _refreshSessionRepository.UpdateAsync(session, ct);
 
@@ -107,10 +121,12 @@ public class AuthService : IAuthService
         var newAccessToken = GenerateAccessToken(user, roles, permissions);
         var newRefreshToken = GenerateRefreshToken();
 
+        // Rotate within same family
         var newSession = new RefreshSession(
             Guid.NewGuid(),
             user.Id,
             newRefreshToken,
+            session.TokenFamilyId,
             DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays));
 
         await _refreshSessionRepository.AddAsync(newSession, ct);

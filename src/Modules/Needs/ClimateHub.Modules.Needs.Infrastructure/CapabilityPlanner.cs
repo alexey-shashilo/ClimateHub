@@ -1,10 +1,13 @@
+using ClimateHub.Modules.EngineeringSystems.Domain;
 using ClimateHub.Modules.Needs.Domain;
 
 namespace ClimateHub.Modules.Needs.Infrastructure;
 
 public class CapabilityPlanner
 {
-    private static readonly Dictionary<NeedType, string> NeedToCapability = new()
+    // Canonical mapping lives in EngineeringCapabilityCodes.EngCapabilityToDeviceCodes.
+    // This dictionary maps Needs to the first device capability code from that canonical source.
+    private static readonly Dictionary<NeedType, string> NeedToDeviceCapability = new()
     {
         [NeedType.TemperatureHeating] = "control.damper-position",
         [NeedType.TemperatureCooling] = "control.fan-speed",
@@ -15,24 +18,23 @@ public class CapabilityPlanner
         [NeedType.IlluminanceDecrease] = "control.lighting",
     };
 
-    // NeedType → Engineering Capability mapping (high-level, for Engineering Systems routing)
     private static readonly Dictionary<NeedType, string> NeedToEngCapability = new()
     {
-        [NeedType.TemperatureHeating] = "eng.temperature.increase",
-        [NeedType.TemperatureCooling] = "eng.temperature.decrease",
-        [NeedType.HumidityIncrease] = "eng.humidity.increase",
-        [NeedType.HumidityDecrease] = "eng.humidity.decrease",
-        [NeedType.Co2Reduction] = "eng.co2.reduce",
-        [NeedType.IlluminanceIncrease] = "eng.illuminance.increase",
-        [NeedType.IlluminanceDecrease] = "eng.illuminance.decrease",
+        [NeedType.TemperatureHeating] = EngineeringCapabilityCodes.IncreaseTemperature,
+        [NeedType.TemperatureCooling] = EngineeringCapabilityCodes.DecreaseTemperature,
+        [NeedType.HumidityIncrease] = EngineeringCapabilityCodes.IncreaseHumidity,
+        [NeedType.HumidityDecrease] = EngineeringCapabilityCodes.DecreaseHumidity,
+        [NeedType.Co2Reduction] = EngineeringCapabilityCodes.ReduceCo2,
+        [NeedType.IlluminanceIncrease] = EngineeringCapabilityCodes.IncreaseIlluminance,
+        [NeedType.IlluminanceDecrease] = EngineeringCapabilityCodes.DecreaseIlluminance,
     };
 
     public static string? GetCapabilityCode(NeedType needType) =>
-        NeedToCapability.GetValueOrDefault(needType);
+        NeedToDeviceCapability.GetValueOrDefault(needType);
 
     public static string? GetEngineeringCapabilityCode(NeedType needType) =>
         NeedToEngCapability.GetValueOrDefault(needType);
 
     public static NeedType? GetNeedType(string capabilityCode) =>
-        NeedToCapability.FirstOrDefault(kv => kv.Value == capabilityCode).Key;
+        NeedToDeviceCapability.FirstOrDefault(kv => kv.Value == capabilityCode).Key;
 }
