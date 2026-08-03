@@ -15,7 +15,9 @@ using ClimateHub.Modules.EngineeringSystems;
 using ClimateHub.Modules.EngineeringSystems.Infrastructure;
 using ClimateHub.Modules.IAM;
 using ClimateHub.Modules.IAM.Domain;
+using ClimateHub.Api.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -83,6 +85,8 @@ try
         });
 
     builder.Services.AddAuthorization();
+    builder.Services.AddSingleton<IAuthorizationHandler, ClimateHub.Api.Authorization.BuildingAccessHandler>();
+    builder.Services.AddSingleton<IAuthorizationHandler, ClimateHub.Api.Authorization.PermissionHandler>();
 
     var app = builder.Build();
 
