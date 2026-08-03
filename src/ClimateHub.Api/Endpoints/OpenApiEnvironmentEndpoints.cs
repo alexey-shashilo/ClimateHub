@@ -1,5 +1,5 @@
+using ClimateHub.Api.Authorization;
 using ClimateHub.Modules.Building.Application.Queries;
-using ClimateHub.Modules.Devices.Contracts;
 using ClimateHub.Modules.Environment.Contracts;
 using ClimateHub.Modules.Environment.Infrastructure.Repositories;
 using ClimateHub.SharedKernel.Primitives;
@@ -44,7 +44,7 @@ public static class OpenApiEnvironmentEndpoints
                 parameters = new { temperature = temp, relativeHumidity = hum, co2, illuminance = ill },
                 updatedAt = DateTimeOffset.UtcNow
             });
-        });
+        }).RequirePermission("environment_read");
 
         eg.MapGet("/{roomId}/environment/history", async (
             string roomId,
@@ -95,10 +95,10 @@ public static class OpenApiEnvironmentEndpoints
                 aggregation = "raw",
                 points
             });
-        });
+        }).RequirePermission("environment_read");
     }
 
-    private static string ClassifyStatus(RoomParameterEntity? temp, RoomParameterEntity? hum, RoomParameterEntity? co2)
+    private static string ClassifyStatus(ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity? temp, ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity? hum, ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity? co2)
     {
         if (temp is null && hum is null && co2 is null) return "unknown";
         if (co2?.Value > 1400) return "critical";
@@ -108,7 +108,7 @@ public static class OpenApiEnvironmentEndpoints
         return "normal";
     }
 
-    private static object ToParamObj(RoomParameterEntity e, string unit)
+    private static object ToParamObj(ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity e, string unit)
     {
         var target = e.Parameter switch
         {

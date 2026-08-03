@@ -1,9 +1,9 @@
+using ClimateHub.Api.Authorization;
 using ClimateHub.Modules.Devices.Application.Commands;
 using ClimateHub.Modules.Devices.Application.OpenApi;
 using ClimateHub.Modules.Devices.Domain.Repositories;
 using ClimateHub.SharedKernel.Primitives;
 using Dto = ClimateHub.Modules.Devices.Application.OpenApi;
-
 
 namespace ClimateHub.Api.Endpoints;
 
@@ -18,14 +18,14 @@ public static class OpenApiDeviceEndpoints
             var devices = await repo.GetAllAsync(ct);
             var dtos = devices.Select(ToDeviceSummary).ToList();
             return Results.Ok(dtos);
-        });
+        }).RequirePermission("device_read");
 
         dg.MapGet("/{deviceId}", async (string deviceId, IDeviceRepository repo, CancellationToken ct) =>
         {
             if (!Guid.TryParse(deviceId, out var guid)) return Results.Problem(statusCode: 404, detail: "DEVICE_NOT_FOUND");
             var device = await repo.GetByIdAsync(DeviceId.From(guid), ct);
             return device is null ? Results.Problem(statusCode: 404, detail: "DEVICE_NOT_FOUND") : Results.Ok(ToDeviceSummary(device));
-        });
+        }).RequirePermission("device_read");
 
         dg.MapPost("/", async (HttpContext ctx, CancellationToken ct) =>
         {
@@ -34,7 +34,7 @@ public static class OpenApiDeviceEndpoints
             var handler = ctx.RequestServices.GetRequiredService<RegisterDeviceHandler>();
             var result = await handler.HandleAsync(command, ct);
             return Results.Created($"/api/v1/devices/{result.Id}", result with { Id = result.Id.ToString() });
-        });
+        }).RequirePermission("device_register");
 
         dg.MapPost("/{deviceId}/assignments", async (
             string deviceId, HttpContext ctx, CancellationToken ct) =>
@@ -47,7 +47,7 @@ public static class OpenApiDeviceEndpoints
             var cmd = new AssignDeviceCommand { DeviceId = DeviceId.From(guid), RoomId = SharedKernel.Primitives.RoomId.From(roomGuid) };
             var result = await handler.HandleAsync(cmd, ct);
             return Results.Ok(result);
-        });
+        }).RequirePermission("device_configure");
 
         dg.MapPut("/{deviceId}", async (string deviceId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -57,7 +57,7 @@ public static class OpenApiDeviceEndpoints
             var handler = ctx.RequestServices.GetRequiredService<UpdateDeviceHandler>();
             await handler.HandleAsync(new UpdateDeviceCommand { Id = DeviceId.From(guid), Name = body.Name }, ct);
             return Results.NoContent();
-        });
+        }).RequirePermission("device_configure");
 
         dg.MapDelete("/{deviceId}", async (string deviceId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -65,7 +65,7 @@ public static class OpenApiDeviceEndpoints
             var handler = ctx.RequestServices.GetRequiredService<DeleteDeviceHandler>();
             await handler.HandleAsync(new DeleteDeviceCommand { Id = DeviceId.From(guid) }, ct);
             return Results.NoContent();
-        });
+        }).RequirePermission("device_delete");
     }
 
     public static void MapOpenApiRoomDeviceEndpoints(this WebApplication app)
@@ -77,7 +77,7 @@ public static class OpenApiDeviceEndpoints
             var devices = await repo.GetByRoomAsync(roomIdObj, ct);
             var dtos = devices.Select(ToDeviceSummary).ToList();
             return Results.Ok(dtos);
-        }).WithTags("Devices");
+        }).WithTags("Devices").RequirePermission("device_read");
     }
 
     private static Dto.DeviceSummaryDto ToDeviceSummary(Modules.Devices.Domain.Aggregates.Device d) => new(

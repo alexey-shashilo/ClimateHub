@@ -1,3 +1,4 @@
+using ClimateHub.Api.Authorization;
 using ClimateHub.Modules.Building.Application.Commands;
 using ClimateHub.Modules.Building.Application.Queries;
 using ClimateHub.SharedKernel.Primitives;
@@ -14,7 +15,7 @@ public static class OpenApiBuildingEndpoints
         {
             var result = await service.ListBuildingsAsync(ct);
             return Results.Ok(result);
-        });
+        }).RequirePermission("building_read");
 
         bg.MapPost("/", async (HttpContext ctx, CancellationToken ct) =>
         {
@@ -25,14 +26,14 @@ public static class OpenApiBuildingEndpoints
             var cmd = new CreateBuildingCommand { Name = body.Name, Address = body.Address };
             var result = await handler.HandleAsync(cmd, ct);
             return Results.Created($"/api/v1/buildings/{result.Id}", result);
-        });
+        }).RequirePermission("building_configure");
 
         bg.MapGet("/{buildingId}", async (string buildingId, BuildingOpenApiService service, CancellationToken ct) =>
         {
             if (!Guid.TryParse(buildingId, out var guid)) return Results.Problem(statusCode: 400, detail: "BUILDING_NOT_FOUND");
             var result = await service.GetBuildingSummaryAsync(BuildingId.From(guid), ct);
             return result is null ? Results.Problem(statusCode: 404, detail: "BUILDING_NOT_FOUND") : Results.Ok(result);
-        });
+        }).RequireBuildingAccess();
 
         bg.MapPost("/{buildingId}/floors", async (
             string buildingId,
@@ -47,14 +48,14 @@ public static class OpenApiBuildingEndpoints
             var cmd = new CreateFloorCommand { BuildingId = BuildingId.From(guid), Name = body.Name, Level = body.Level };
             var result = await floorHandler.HandleAsync(cmd, ct);
             return Results.Created($"/api/v1/buildings/{buildingId}/floors/{result.Id}", result);
-        });
+        }).RequireBuildingAccess().RequirePermission("building_configure");
 
         bg.MapGet("/{buildingId}/floors", async (string buildingId, BuildingOpenApiService service, CancellationToken ct) =>
         {
             if (!Guid.TryParse(buildingId, out var guid)) return Results.Problem(statusCode: 400, detail: "BUILDING_NOT_FOUND");
             var result = await service.GetFloorsAsync(BuildingId.From(guid), ct);
             return Results.Ok(result);
-        });
+        }).RequireBuildingAccess();
 
         bg.MapPut("/{buildingId}", async (string buildingId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -64,7 +65,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<UpdateBuildingHandler>();
             await handler.HandleAsync(new UpdateBuildingCommand { Id = BuildingId.From(guid), Name = body.Name }, ct);
             return Results.NoContent();
-        });
+        }).RequireBuildingAccess().RequirePermission("building_configure");
 
         bg.MapDelete("/{buildingId}", async (string buildingId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -72,7 +73,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<DeleteBuildingHandler>();
             await handler.HandleAsync(new DeleteBuildingCommand { Id = BuildingId.From(guid) }, ct);
             return Results.NoContent();
-        });
+        }).RequireBuildingAccess().RequirePermission("building_configure");
     }
 
     public static void MapOpenApiFloorEndpoints(this WebApplication app)
@@ -92,13 +93,13 @@ public static class OpenApiBuildingEndpoints
             var cmd = new CreateRoomCommand { FloorId = FloorId.From(guid), Name = body.Name, Purpose = body.Purpose };
             var result = await roomHandler.HandleAsync(cmd, ct);
             return Results.Created($"/api/v1/floors/{floorId}/rooms/{result.Id}", result);
-        });
+        }).RequirePermission("building_configure");
 
         fg.MapGet("/{floorId}/rooms", (string floorId, BuildingOpenApiService service, CancellationToken ct) =>
         {
             if (!Guid.TryParse(floorId, out var guid)) return Results.Problem(statusCode: 400, detail: "FLOOR_NOT_FOUND");
             return Results.Ok(Array.Empty<object>());
-        });
+        }).RequirePermission("building_read");
 
         fg.MapPut("/{floorId}", async (string floorId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -108,7 +109,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<UpdateFloorHandler>();
             await handler.HandleAsync(new UpdateFloorCommand { Id = FloorId.From(guid), Name = body.Name, Level = body.Level }, ct);
             return Results.NoContent();
-        });
+        }).RequirePermission("building_configure");
 
         fg.MapDelete("/{floorId}", async (string floorId, string? buildingId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -117,7 +118,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<DeleteFloorHandler>();
             await handler.HandleAsync(new DeleteFloorCommand { BuildingId = BuildingId.From(bgid), FloorId = FloorId.From(fgid) }, ct);
             return Results.NoContent();
-        });
+        }).RequirePermission("building_configure");
     }
 
     public static void MapOpenApiRoomEndpoints(this WebApplication app)
@@ -127,7 +128,7 @@ public static class OpenApiBuildingEndpoints
             if (!Guid.TryParse(roomId, out var guid)) return Results.Problem(statusCode: 400, detail: "ROOM_NOT_FOUND");
             var result = await service.GetRoomSummaryAsync(RoomId.From(guid), ct);
             return result is null ? Results.Problem(statusCode: 404, detail: "ROOM_NOT_FOUND") : Results.Ok(result);
-        }).WithTags("Rooms");
+        }).WithTags("Rooms").RequirePermission("room_read");
 
         app.MapPut("/api/v1/rooms/{roomId}", async (string roomId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -137,7 +138,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<UpdateRoomHandler>();
             await handler.HandleAsync(new UpdateRoomCommand { Id = RoomId.From(guid), Name = body.Name, Purpose = body.Purpose }, ct);
             return Results.NoContent();
-        }).WithTags("Rooms");
+        }).WithTags("Rooms").RequirePermission("room_configure");
 
         app.MapDelete("/api/v1/rooms/{roomId}", async (string roomId, string? floorId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -146,7 +147,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<DeleteRoomHandler>();
             await handler.HandleAsync(new DeleteRoomCommand { FloorId = FloorId.From(fgid), RoomId = RoomId.From(rgid) }, ct);
             return Results.NoContent();
-        }).WithTags("Rooms");
+        }).WithTags("Rooms").RequirePermission("room_configure");
     }
 }
 
