@@ -4,7 +4,6 @@ using ClimateHub.Infrastructure.InternalEvents;
 using ClimateHub.Modules.Climate.Contracts;
 using ClimateHub.Modules.Commands.Contracts;
 using ClimateHub.Modules.Devices.Contracts;
-using ClimateHub.Modules.EngineeringSystems.Contracts;
 using ClimateHub.Modules.Environment.Contracts;
 using ClimateHub.Modules.Needs.Contracts;
 using ClimateHub.Modules.Needs.Domain;
@@ -27,7 +26,6 @@ public class NeedEvaluationService
     private readonly ICommandsModule _commandsModule;
     private readonly ICapabilityCatalog _capabilityCatalog;
     private readonly IClimateModule _climateModule;
-    private readonly IEngineeringSystemsModule _engineeringSystemsModule;
     private readonly EnvironmentEventBus _eventBus;
     private readonly InternalEventOutboxRepository _internalEventOutbox;
     private readonly RoomEvaluationLock _roomLock;
@@ -45,7 +43,6 @@ public class NeedEvaluationService
         ICommandsModule commandsModule,
         ICapabilityCatalog capabilityCatalog,
         IClimateModule climateModule,
-        IEngineeringSystemsModule engineeringSystemsModule,
         EnvironmentEventBus eventBus,
         InternalEventOutboxRepository internalEventOutbox,
         RoomEvaluationLock roomLock,
@@ -58,7 +55,6 @@ public class NeedEvaluationService
         _evalStateRepo = evalStateRepo; _devicesModule = devicesModule;
         _commandsModule = commandsModule; _capabilityCatalog = capabilityCatalog;
         _climateModule = climateModule;
-        _engineeringSystemsModule = engineeringSystemsModule;
         _eventBus = eventBus;
         _internalEventOutbox = internalEventOutbox; _roomLock = roomLock;
         _antiOscillation = antiOscillation; _deviceResolver = deviceResolver;
