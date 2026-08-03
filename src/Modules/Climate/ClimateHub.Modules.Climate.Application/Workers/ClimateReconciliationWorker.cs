@@ -1,3 +1,4 @@
+using ClimateHub.Modules.Climate.Application.EffectModel;
 using ClimateHub.Modules.Climate.Application.Events;
 using ClimateHub.Modules.Climate.Domain;
 using ClimateHub.Modules.Climate.Domain.ClimateGoals;
@@ -70,7 +71,10 @@ public class ClimateReconciliationWorker : BackgroundService
         var goalRepo = scope.ServiceProvider.GetRequiredService<IClimateGoalRepository>();
         var resourceRepo = scope.ServiceProvider.GetRequiredService<IClimateResourceRepository>();
         var eventPublisher = scope.ServiceProvider.GetRequiredService<ClimateLifecycleEventPublisher>();
+        var effectEvaluator = scope.ServiceProvider.GetRequiredService<ClimatePlanEffectEvaluator>();
         var opts = _options.Value;
+
+        await effectEvaluator.EvaluateEffectAsync(ct);
 
         var duePlans = await planRepo.GetDueForEffectAsync(opts.MaximumEffectWaitDuration, ct);
         foreach (var plan in duePlans)

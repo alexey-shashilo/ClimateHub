@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<ClimateSseProjectionHandler>();
         services.AddScoped<ClimateLifecycleEventPublisher>();
         services.AddScoped<ClimateDependencyGraphValidator>();
+        services.AddScoped<ClimatePlanEffectEvaluator>();
 
         services.Configure<ClimateEventConsumerOptions>(options =>
         {
