@@ -21,4 +21,5 @@ public static class ClimateErrors
     public const string ConcurrencyConflict = "CLIMATE_CONCURRENCY_CONFLICT";
     public const string EngineeringSubPlanFailed = "ENGINEERING_SUB_PLAN_FAILED";
     public const string EngineeringSubPlanUnavailable = "ENGINEERING_SUB_PLAN_UNAVAILABLE";
+    public const string InvalidGraphError = "CLIMATE_PLAN_INVALID_GRAPH";
 }

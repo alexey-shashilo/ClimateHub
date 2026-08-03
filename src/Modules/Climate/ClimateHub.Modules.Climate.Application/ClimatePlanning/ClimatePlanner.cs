@@ -1,4 +1,5 @@
 using ClimateHub.Modules.Climate.Application.ConflictResolution;
+using ClimateHub.Modules.Climate.Application.DependencyGraph;
 using ClimateHub.Modules.Climate.Application.Execution;
 using ClimateHub.Modules.Climate.Application.GoalPlanning;
 using ClimateHub.Modules.Climate.Application.Prioritization;
@@ -19,19 +20,22 @@ public class ClimatePlanner
     private readonly PriorityEngine _priorityEngine;
     private readonly ClimateExecutionCoordinator _executionCoordinator;
     private readonly IEngineeringSystemsModule _engineeringSystems;
+    private readonly ClimateDependencyGraphValidator _graphValidator;
 
     public ClimatePlanner(
         GoalPlanner goalPlanner,
         ConflictResolver conflictResolver,
         PriorityEngine priorityEngine,
         ClimateExecutionCoordinator executionCoordinator,
-        IEngineeringSystemsModule engineeringSystems)
+        IEngineeringSystemsModule engineeringSystems,
+        ClimateDependencyGraphValidator graphValidator)
     {
         _goalPlanner = goalPlanner;
         _conflictResolver = conflictResolver;
         _priorityEngine = priorityEngine;
         _executionCoordinator = executionCoordinator;
         _engineeringSystems = engineeringSystems;
+        _graphValidator = graphValidator;
     }
 
     public async Task<ClimatePlanResult> CreatePlanAsync(
@@ -97,6 +101,16 @@ public class ClimatePlanner
         }
 
         plan.Start();
+
+        // Enforce dependency graph validation before returning the plan
+        var validationResult = _graphValidator.Validate(plan);
+        if (!validationResult.IsValid)
+        {
+            var errorMessage = string.Join("; ", validationResult.Errors);
+            plan.Fail(ClimateErrors.PlanDependencyCycle, errorMessage);
+            return new ClimatePlanResult(plan, resolution);
+        }
+
         return new ClimatePlanResult(plan, resolution);
     }
 

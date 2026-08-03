@@ -54,6 +54,10 @@ public static class DependencyInjection
         services.AddScoped<IWeatherCompensationCurveRepository, WeatherCompensationCurveRepository>();
         services.AddScoped<IThermalDemandRepository, ThermalDemandRepository>();
 
+        services.AddScoped<IHumidificationConfigurationRepository, HumidificationConfigurationRepository>();
+        services.AddScoped<IHumidificationZoneRepository, HumidificationZoneRepository>();
+        services.AddScoped<IHumidificationDemandRepository, HumidificationDemandRepository>();
+
         services.AddScoped<WeatherCompensationPlanner>();
         services.AddScoped<HeatLossEstimator>();
         services.AddScoped<ThermalDemandAggregator>();

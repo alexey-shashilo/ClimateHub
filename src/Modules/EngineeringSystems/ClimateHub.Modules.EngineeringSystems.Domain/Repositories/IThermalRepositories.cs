@@ -1,3 +1,4 @@
+using ClimateHub.Modules.EngineeringSystems.Domain.Humidification;
 using ClimateHub.Modules.EngineeringSystems.Domain.Thermal;
 using ClimateHub.SharedKernel.Primitives;
 
@@ -81,4 +82,26 @@ public interface IThermalDemandRepository
     Task<IReadOnlyCollection<ThermalDemand>> GetActiveByRoomAsync(RoomId roomId, CancellationToken ct = default);
     Task AddAsync(ThermalDemand demand, CancellationToken ct = default);
     Task UpdateAsync(ThermalDemand demand, CancellationToken ct = default);
+}
+
+public interface IHumidificationConfigurationRepository
+{
+    Task<HumidificationSystemConfiguration?> GetByEngineeringSystemAsync(Guid engineeringSystemId, CancellationToken ct = default);
+    Task AddAsync(HumidificationSystemConfiguration config, CancellationToken ct = default);
+    Task UpdateAsync(HumidificationSystemConfiguration config, CancellationToken ct = default);
+}
+
+public interface IHumidificationZoneRepository
+{
+    Task<IReadOnlyCollection<HumidificationZone>> GetByEngineeringSystemAsync(Guid engineeringSystemId, CancellationToken ct = default);
+    Task AddAsync(HumidificationZone zone, CancellationToken ct = default);
+    Task UpdateAsync(HumidificationZone zone, CancellationToken ct = default);
+}
+
+public interface IHumidificationDemandRepository
+{
+    Task<IReadOnlyCollection<HumidificationDemand>> GetActiveByEngineeringSystemAsync(Guid engineeringSystemId, CancellationToken ct = default);
+    Task<IReadOnlyCollection<HumidificationDemand>> GetActiveByRoomAsync(RoomId roomId, CancellationToken ct = default);
+    Task AddAsync(HumidificationDemand demand, CancellationToken ct = default);
+    Task UpdateAsync(HumidificationDemand demand, CancellationToken ct = default);
 }
