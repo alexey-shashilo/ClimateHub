@@ -18,22 +18,25 @@ public class RoleRepository : IRoleRepository
     public Task<List<Role>> GetAllAsync(CancellationToken ct = default) =>
         _db.Roles.ToListAsync(ct);
 
-    public Task AddAsync(Role role, CancellationToken ct = default)
+    public async Task AddAsync(Role role, CancellationToken ct = default)
     {
         _db.Roles.Add(role);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
-    public Task UpdateAsync(Role role, CancellationToken ct = default)
+    public async Task UpdateAsync(Role role, CancellationToken ct = default)
     {
         _db.Roles.Update(role);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var role = await _db.Roles.FirstOrDefaultAsync(r => r.Id == id, ct);
         if (role is not null)
+        {
             _db.Roles.Remove(role);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 }

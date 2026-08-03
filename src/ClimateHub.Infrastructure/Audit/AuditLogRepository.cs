@@ -8,10 +8,10 @@ public class AuditLogRepository : IAuditLogRepository
 
     public AuditLogRepository(AuditLogDbContext db) => _db = db;
 
-    public Task AppendAsync(AuditEvent auditEvent, CancellationToken ct = default)
+    public async Task AppendAsync(AuditEvent auditEvent, CancellationToken ct = default)
     {
         _db.AuditEvents.Add(auditEvent);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
     public Task<List<AuditEvent>> GetByActorAsync(string actorId, int limit = 100, CancellationToken ct = default) =>

@@ -21,21 +21,21 @@ public static class NeedsEndpoints
             if (!Guid.TryParse(needId, out var gid)) return Results.Problem(statusCode: 400, detail: "NEED_NOT_FOUND");
             var need = await repo.GetByIdAsync(new ClimateHub.Modules.Needs.Domain.NeedId(gid), ct);
             return need is null ? Results.Problem(statusCode: 404, detail: "NEED_NOT_FOUND") : Results.Ok(need);
-        }).RequirePermission("need_read");
+        }).RequireNeedAccess().RequirePermission("need_read");
 
         g.MapGet("/rooms/{roomId}", async (string roomId, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {
             if (!Guid.TryParse(roomId, out var gid)) return Results.Problem(statusCode: 400, detail: "ROOM_NOT_FOUND");
             var needs = await repo.GetByRoomAsync(ClimateHub.SharedKernel.Primitives.RoomId.From(gid), ct);
             return Results.Ok(needs);
-        }).RequirePermission("need_read");
+        }).RequireRoomAccess().RequirePermission("need_read");
 
         g.MapPost("/rooms/{roomId}/evaluate", async (string roomId, ClimateHub.Modules.Needs.Infrastructure.NeedEvaluationService eval, CancellationToken ct) =>
         {
             if (!Guid.TryParse(roomId, out var gid)) return Results.Problem(statusCode: 400, detail: "ROOM_NOT_FOUND");
             await eval.EvaluateRoomAsync(ClimateHub.SharedKernel.Primitives.RoomId.From(gid), ClimateHub.Modules.Needs.Domain.NeedEvaluationTrigger.ManualRequest, ct: ct);
             return Results.Ok(new { status = "evaluated" });
-        }).RequirePermission("need_configure");
+        }).RequireRoomAccess().RequirePermission("need_configure");
 
         g.MapPost("/{needId}/evaluate", async (string needId, ClimateHub.Modules.Needs.Infrastructure.NeedEvaluationService eval, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {
@@ -44,7 +44,7 @@ public static class NeedsEndpoints
             if (need is null) return Results.Problem(statusCode: 404, detail: "NEED_NOT_FOUND");
             await eval.PlanAndExecuteAsync(need, ClimateHub.Modules.Needs.Domain.NeedEvaluationTrigger.ManualRequest, ct: ct);
             return Results.Ok(new { status = "planned" });
-        }).RequirePermission("need_configure");
+        }).RequireNeedAccess().RequirePermission("need_configure");
 
         g.MapPost("/{needId}/execute", async (string needId, ClimateHub.Modules.Needs.Infrastructure.NeedEvaluationService eval, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {
@@ -59,7 +59,7 @@ public static class NeedsEndpoints
                 return Results.Problem(statusCode: 400, detail: "NEED_ALREADY_RESOLVED");
             await eval.PlanAndExecuteAsync(need, ClimateHub.Modules.Needs.Domain.NeedEvaluationTrigger.ManualRequest, ct: ct);
             return Results.Ok(new { status = "executing" });
-        }).RequirePermission("need_execute");
+        }).RequireNeedAccess().RequirePermission("need_execute");
 
         g.MapPost("/{needId}/cancel", async (string needId, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {
@@ -71,7 +71,7 @@ public static class NeedsEndpoints
             need.Cancel();
             await repo.UpdateAsync(need, ct);
             return Results.Ok(new { status = "cancelled" });
-        }).RequirePermission("need_configure");
+        }).RequireNeedAccess().RequirePermission("need_configure");
 
         g.MapPost("/{needId}/unblock", async (string needId, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {
@@ -83,14 +83,14 @@ public static class NeedsEndpoints
             need.ClearBlock();
             await repo.UpdateAsync(need, ct);
             return Results.Ok(new { status = "unblocked" });
-        }).RequirePermission("need_configure");
+        }).RequireNeedAccess().RequirePermission("need_configure");
 
         g.MapGet("/{needId}/evaluations", async (string needId, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {
             if (!Guid.TryParse(needId, out var gid)) return Results.Problem(statusCode: 400, detail: "NEED_NOT_FOUND");
             var evals = await repo.GetEvaluationsAsync(new ClimateHub.Modules.Needs.Domain.NeedId(gid), ct: ct);
             return Results.Ok(evals);
-        }).RequirePermission("need_read");
+        }).RequireNeedAccess().RequirePermission("need_read");
 
         g.MapGet("/buildings/{buildingId}", async (string buildingId, ClimateHub.Modules.Needs.Domain.Repositories.INeedRepository repo, CancellationToken ct) =>
         {

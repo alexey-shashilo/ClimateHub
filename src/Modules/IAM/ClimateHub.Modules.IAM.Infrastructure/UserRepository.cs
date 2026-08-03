@@ -18,23 +18,26 @@ public class UserRepository : IUserRepository
     public Task<List<UserAccount>> GetAllAsync(CancellationToken ct = default) =>
         _db.Users.ToListAsync(ct);
 
-    public Task AddAsync(UserAccount user, CancellationToken ct = default)
+    public async Task AddAsync(UserAccount user, CancellationToken ct = default)
     {
         _db.Users.Add(user);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
-    public Task UpdateAsync(UserAccount user, CancellationToken ct = default)
+    public async Task UpdateAsync(UserAccount user, CancellationToken ct = default)
     {
         _db.Users.Update(user);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
         if (user is not null)
+        {
             _db.Users.Remove(user);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     public async Task<List<Role>> GetUserRolesAsync(Guid userId, CancellationToken ct = default)

@@ -2,6 +2,7 @@ using ClimateHub.Api.Authorization;
 using ClimateHub.Modules.EngineeringSystems.Application;
 using ClimateHub.Modules.EngineeringSystems.Domain;
 using ClimateHub.Modules.EngineeringSystems.Domain.Repositories;
+using ClimateHub.Modules.IAM.Domain;
 using ClimateHub.SharedKernel.Primitives;
 
 namespace ClimateHub.Api.Endpoints;
@@ -23,7 +24,7 @@ public static class EngineeringSystemsEndpoints
             if (!Guid.TryParse(id, out var guid)) return Results.Problem(statusCode: 400, detail: "INVALID_ID");
             var system = await repo.GetByIdAsync(EngineeringSystemId.From(guid), ct);
             return system is null ? Results.Problem(statusCode: 404) : Results.Ok(MapToDto(system));
-        }).RequirePermission("engineering_read");
+        }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
         g.MapGet("/{id}/resources", async (string id, IEngineeringSystemRepository repo, CancellationToken ct) =>
         {
@@ -33,7 +34,7 @@ public static class EngineeringSystemsEndpoints
             {
                 r.Code, r.Unit, r.Maximum, r.Available, r.Reserved, r.Used, r.Priority
             }));
-        }).RequirePermission("engineering_read");
+        }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
         g.MapGet("/{id}/zones", async (string id, IEngineeringSystemRepository repo, CancellationToken ct) =>
         {
@@ -43,7 +44,7 @@ public static class EngineeringSystemsEndpoints
             {
                 z.Id, z.Name, z.Priority, RoomIds = z.ZoneRooms.Select(zr => zr.RoomId.ToString())
             }));
-        }).RequirePermission("engineering_read");
+        }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
         g.MapGet("/{id}/devices", async (string id, IEngineeringSystemRepository repo, CancellationToken ct) =>
         {
@@ -53,14 +54,14 @@ public static class EngineeringSystemsEndpoints
             {
                 b.Id, b.DeviceId, b.Role, b.Priority, b.Enabled
             }));
-        }).RequirePermission("engineering_read");
+        }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
         g.MapGet("/{id}/plans", async (string id, ICommandPlanRepository planRepo, CancellationToken ct) =>
         {
             if (!Guid.TryParse(id, out var guid)) return Results.Problem(statusCode: 400);
             var plans = await planRepo.GetBySystemAsync(EngineeringSystemId.From(guid), ct);
             return Results.Ok(plans.Select(MapPlanToDto));
-        }).RequirePermission("engineering_read");
+        }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
         g.MapGet("/{id}/status", async (string id, IEngineeringSystemRepository sysRepo, ICommandPlanRepository planRepo, CancellationToken ct) =>
         {
@@ -76,7 +77,7 @@ public static class EngineeringSystemsEndpoints
                 Resources = system.Resources.Select(r => new { r.Code, r.Maximum, r.Available, r.Reserved, r.Used }),
                 ActivePlanCount = activePlans.Count(p => p.Status == CommandPlanStatus.Executing || p.Status == CommandPlanStatus.Reserved || p.Status == CommandPlanStatus.Allocated)
             });
-        }).RequirePermission("engineering_read");
+        }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
         // Command Plans
         var cp = app.MapGroup("/api/v1/command-plans").WithTags("Command Plans");
@@ -106,10 +107,18 @@ public static class EngineeringSystemsEndpoints
         }).RequirePermission("engineering_read");
 
         // POST Engineering System
-        g.MapPost("/", async (CreateEngineeringSystemRequest req, IEngineeringSystemRepository repo, CancellationToken ct) =>
+        g.MapPost("/", async (CreateEngineeringSystemRequest req, IEngineeringSystemRepository repo, IBuildingAccessGrantRepository grantRepo, CancellationToken ct, HttpContext httpCtx) =>
         {
             if (!Guid.TryParse(req.BuildingId, out var bg))
                 return Results.Problem(statusCode: 400, detail: "INVALID_BUILDING_ID");
+
+            var userIdClaim = httpCtx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim is null || !Guid.TryParse(userIdClaim, out var actorUserId))
+                return Results.Problem(statusCode: 401, detail: "Not authenticated");
+
+            var hasAccess = await grantRepo.HasAccessAsync(actorUserId, bg, ct);
+            if (!hasAccess)
+                return Results.Problem(statusCode: 403, detail: "Access denied to this building");
 
             if (!Enum.TryParse<SystemType>(req.SystemType, true, out var systemType))
                 return Results.Problem(statusCode: 400, detail: "INVALID_SYSTEM_TYPE");

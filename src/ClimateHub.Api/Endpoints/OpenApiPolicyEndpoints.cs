@@ -27,7 +27,7 @@ public static class OpenApiPolicyEndpoints
                 co2 = new { minimum = policy.Co2Min, maximum = policy.Co2Max, preferred = policy.Co2Preferred, controlMode = policy.Co2Mode.ToString() },
                 illuminance = new { minimum = policy.IlluminanceMin, maximum = policy.IlluminanceMax, preferred = policy.IlluminancePreferred, controlMode = policy.IlluminanceMode.ToString() }
             });
-        }).WithTags("Policy").RequirePermission("policy_read");
+        }).WithTags("Policy").RequireRoomAccess().RequirePermission("policy_read");
 
         app.MapPut("/api/v1/rooms/{roomId}/policy", async (string roomId, HttpContext ctx, IRoomPolicyRepository repo, CancellationToken ct) =>
         {
@@ -54,7 +54,7 @@ public static class OpenApiPolicyEndpoints
             }
             await repo.UpsertAsync(existing, ct);
             return Results.NoContent();
-        }).WithTags("Policy").RequirePermission("policy_configure");
+        }).WithTags("Policy").RequireRoomAccess().RequirePermission("policy_configure");
     }
 }
 

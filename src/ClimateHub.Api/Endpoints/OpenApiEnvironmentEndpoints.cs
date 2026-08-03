@@ -44,7 +44,7 @@ public static class OpenApiEnvironmentEndpoints
                 parameters = new { temperature = temp, relativeHumidity = hum, co2, illuminance = ill },
                 updatedAt = DateTimeOffset.UtcNow
             });
-        }).RequirePermission("environment_read");
+        }).RequireRoomAccess().RequirePermission("environment_read");
 
         eg.MapGet("/{roomId}/environment/history", async (
             string roomId,
@@ -95,7 +95,7 @@ public static class OpenApiEnvironmentEndpoints
                 aggregation = "raw",
                 points
             });
-        }).RequirePermission("environment_read");
+        }).RequireRoomAccess().RequirePermission("environment_read");
     }
 
     private static string ClassifyStatus(ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity? temp, ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity? hum, ClimateHub.Modules.Environment.Infrastructure.Repositories.RoomParameterEntity? co2)

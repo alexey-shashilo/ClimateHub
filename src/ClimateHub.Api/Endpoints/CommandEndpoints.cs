@@ -61,7 +61,7 @@ public static class CommandEndpoints
                 completedAt = cmd.CompletedAt,
                 lastErrorCode = cmd.LastErrorCode
             });
-        }).RequirePermission("command_read");
+        }).RequireCommandAccess().RequirePermission("command_read");
 
         g.MapPost("/{commandId}/cancel", async (string commandId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -74,7 +74,7 @@ public static class CommandEndpoints
             }
             catch (KeyNotFoundException ex) { return Results.Problem(statusCode: 404, detail: ex.Message); }
             catch (InvalidOperationException ex) { return Results.Problem(statusCode: 400, detail: ex.Message); }
-        }).RequirePermission("command_cancel");
+        }).RequireCommandAccess().RequirePermission("command_cancel");
     }
 
     public static void MapDeviceCommandEndpoints(this WebApplication app)
@@ -84,13 +84,13 @@ public static class CommandEndpoints
             if (!Guid.TryParse(deviceId, out var guid)) return Results.Problem(statusCode: 400, detail: "DEVICE_NOT_FOUND");
             var cmds = await repo.GetByDeviceAsync(ClimateHub.SharedKernel.Primitives.DeviceId.From(guid), 50, ct);
             return Results.Ok(cmds);
-        }).WithTags("Commands").RequirePermission("command_read");
+        }).WithTags("Commands").RequireDeviceAccess().RequirePermission("command_read");
 
         app.MapGet("/api/v1/rooms/{roomId}/commands", async (string roomId, ClimateHub.Modules.Commands.Domain.Repositories.ICommandRepository repo, CancellationToken ct) =>
         {
             if (!Guid.TryParse(roomId, out var guid)) return Results.Problem(statusCode: 400, detail: "ROOM_NOT_FOUND");
             var cmds = await repo.GetByRoomAsync(ClimateHub.SharedKernel.Primitives.RoomId.From(guid), 50, ct);
             return Results.Ok(cmds);
-        }).WithTags("Commands").RequirePermission("command_read");
+        }).WithTags("Commands").RequireRoomAccess().RequirePermission("command_read");
     }
 }

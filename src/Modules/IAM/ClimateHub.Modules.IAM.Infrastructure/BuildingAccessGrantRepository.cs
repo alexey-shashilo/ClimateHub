@@ -18,10 +18,10 @@ public class BuildingAccessGrantRepository : IBuildingAccessGrantRepository
     public Task<bool> HasAccessAsync(Guid userId, Guid buildingId, CancellationToken ct = default) =>
         _db.BuildingAccessGrants.AnyAsync(g => g.UserId == userId && g.BuildingId == buildingId, ct);
 
-    public Task AddAsync(BuildingAccessGrant grant, CancellationToken ct = default)
+    public async Task AddAsync(BuildingAccessGrant grant, CancellationToken ct = default)
     {
         _db.BuildingAccessGrants.Add(grant);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task RemoveAsync(Guid userId, Guid buildingId, CancellationToken ct = default)
@@ -29,6 +29,9 @@ public class BuildingAccessGrantRepository : IBuildingAccessGrantRepository
         var grant = await _db.BuildingAccessGrants
             .FirstOrDefaultAsync(g => g.UserId == userId && g.BuildingId == buildingId, ct);
         if (grant is not null)
+        {
             _db.BuildingAccessGrants.Remove(grant);
+            await _db.SaveChangesAsync(ct);
+        }
     }
 }

@@ -15,16 +15,16 @@ public class RefreshSessionRepository : IRefreshSessionRepository
     public Task<List<RefreshSession>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
         _db.RefreshSessions.Where(s => s.UserId == userId).ToListAsync(ct);
 
-    public Task AddAsync(RefreshSession session, CancellationToken ct = default)
+    public async Task AddAsync(RefreshSession session, CancellationToken ct = default)
     {
         _db.RefreshSessions.Add(session);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
-    public Task UpdateAsync(RefreshSession session, CancellationToken ct = default)
+    public async Task UpdateAsync(RefreshSession session, CancellationToken ct = default)
     {
         _db.RefreshSessions.Update(session);
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task RevokeAllForUserAsync(Guid userId, CancellationToken ct = default)
@@ -35,5 +35,7 @@ public class RefreshSessionRepository : IRefreshSessionRepository
 
         foreach (var session in sessions)
             session.Revoke();
+
+        await _db.SaveChangesAsync(ct);
     }
 }
