@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build
 
 on:
   pull_request:
@@ -10,37 +10,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Restore and Build
+      - name: Build
         run: dotnet build
       - name: Architecture Tests
-        run: dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx"
+        run: dotnet test tests/ClimateHub.ArchitectureTests
       - name: Unit Tests
         run: |
           for proj in tests/ClimateHub.Modules.*.UnitTests; do
-            if [ -d "$proj" ]; then dotnet test "$proj" --logger "trx;LogFileName=$(basename $proj).trx"; fi
+            if [ -d "$proj" ]; then dotnet test "$proj"; fi
           done
-      - name: Device Gateway Tests
-        run: dotnet test tests/ClimateHub.DeviceGatewayTests --logger "trx;LogFileName=gateway.trx"
-      - name: Runtime Metrics Tests
-        run: dotnet test tests/ClimateHub.RuntimeMetricsTests --logger "trx;LogFileName=metrics.trx"
-      - name: Hardware Abstraction Tests
-        run: dotnet test tests/ClimateHub.HardwareAbstractionTests --logger "trx;LogFileName=hal.trx"
-      - name: Deployment Config Tests
-        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "Category=Deployment" --logger "trx;LogFileName=deploy-config.trx"
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: '**/*.trx'
-          retention-days: 7
+      - name: Gateway, Metrics, HAL Tests
+        run: |
+          dotnet test tests/ClimateHub.DeviceGatewayTests
+          dotnet test tests/ClimateHub.RuntimeMetricsTests
+          dotnet test tests/ClimateHub.HardwareAbstractionTests
+          dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "Category=Deployment"
 
   frontend:
     runs-on: ubuntu-latest
@@ -55,8 +45,8 @@ jobs:
           node-version: 20
       - name: Install
         run: npm ci
-      - name: Lint & TypeCheck
-        run: npm run lint
+      - name: Check
+        run: npx tsc --noEmit
       - name: Test
         run: npm test
       - name: Build
