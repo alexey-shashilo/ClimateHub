@@ -1,0 +1,29 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+COPY Directory.Build.props Directory.Packages.props global.json ./
+COPY src/ClimateHub.SharedKernel/ClimateHub.SharedKernel.csproj src/ClimateHub.SharedKernel/
+COPY src/ClimateHub.Infrastructure/ClimateHub.Infrastructure.csproj src/ClimateHub.Infrastructure/
+COPY src/ClimateHub.Api/ClimateHub.Api.csproj src/ClimateHub.Api/
+COPY src/Modules/Building/ClimateHub.Modules.Building.Domain/ClimateHub.Modules.Building.Domain.csproj src/Modules/Building/ClimateHub.Modules.Building.Domain/
+COPY src/Modules/Building/ClimateHub.Modules.Building.Contracts/ClimateHub.Modules.Building.Contracts.csproj src/Modules/Building/ClimateHub.Modules.Building.Contracts/
+COPY src/Modules/Building/ClimateHub.Modules.Building.Application/ClimateHub.Modules.Building.Application.csproj src/Modules/Building/ClimateHub.Modules.Building.Application/
+COPY src/Modules/Building/ClimateHub.Modules.Building.Infrastructure/ClimateHub.Modules.Building.Infrastructure.csproj src/Modules/Building/ClimateHub.Modules.Building.Infrastructure/
+COPY src/Modules/Devices/ClimateHub.Modules.Devices.Domain/ClimateHub.Modules.Devices.Domain.csproj src/Modules/Devices/ClimateHub.Modules.Devices.Domain/
+COPY src/Modules/Devices/ClimateHub.Modules.Devices.Contracts/ClimateHub.Modules.Devices.Contracts.csproj src/Modules/Devices/ClimateHub.Modules.Devices.Contracts/
+COPY src/Modules/Devices/ClimateHub.Modules.Devices.Application/ClimateHub.Modules.Devices.Application.csproj src/Modules/Devices/ClimateHub.Modules.Devices.Application/
+COPY src/Modules/Devices/ClimateHub.Modules.Devices.Infrastructure/ClimateHub.Modules.Devices.Infrastructure.csproj src/Modules/Devices/ClimateHub.Modules.Devices.Infrastructure/
+COPY src/Modules/Environment/ClimateHub.Modules.Environment.Domain/ClimateHub.Modules.Environment.Domain.csproj src/Modules/Environment/ClimateHub.Modules.Environment.Domain/
+COPY src/Modules/Environment/ClimateHub.Modules.Environment.Contracts/ClimateHub.Modules.Environment.Contracts.csproj src/Modules/Environment/ClimateHub.Modules.Environment.Contracts/
+COPY src/Modules/Environment/ClimateHub.Modules.Environment.Infrastructure/ClimateHub.Modules.Environment.Infrastructure.csproj src/Modules/Environment/ClimateHub.Modules.Environment.Infrastructure/
+
+RUN dotnet restore src/ClimateHub.Api/ClimateHub.Api.csproj
+
+COPY . .
+RUN dotnet publish src/ClimateHub.Api/ClimateHub.Api.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "ClimateHub.Api.dll"]

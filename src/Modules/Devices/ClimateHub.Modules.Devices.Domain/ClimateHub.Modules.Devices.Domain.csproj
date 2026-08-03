@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\ClimateHub.SharedKernel\ClimateHub.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

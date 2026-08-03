@@ -1,0 +1,62 @@
+# .NET
+bin/
+obj/
+artifacts/
+TestResults/
+coverage/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+coverage/
+playwright-report/
+test-results/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+appsettings.Local.json
+appsettings.*.Local.json
+appsettings.Production.json
+secrets/
+*.pfx
+*.p12
+*.key
+*.pem
+*.jks
+
+# Runtime data
+data/
+volumes/
+backups/
+logs/
+*.db
+*.sqlite
+*.dump
+*.bak
+
+# IDE
+.idea/
+.vscode/*.local.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Generated operational state
+deploy/certificates/private/
+deploy/runtime/
+
+# Deploy environment files (use .env.example)
+deploy/.env
+
+# Frontend env (use .env.example)
+frontend/.env

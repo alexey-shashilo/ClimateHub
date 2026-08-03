@@ -1,0 +1,180 @@
+# Climate Hub - Production Deployment
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: climate-hub-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-climate_hub}
+      POSTGRES_USER: ${POSTGRES_USER:-climate_hub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U climate_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    container_name: climate-hub-mosquitto
+    volumes:
+      - ./mqtt/mosquitto.prod.conf:/mosquitto/config/mosquitto.conf
+      - ./mqtt/mosquitto.acl:/mosquitto/config/mosquitto.acl
+      - ./mqtt/mosquitto.passwd:/mosquitto/config/mosquitto.passwd
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/broker/uptime' -C 1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7.11-alpine
+    container_name: climate-hub-influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:?INFLUXDB_PASSWORD is required}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-climate-hub}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-climate-hub}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:?INFLUXDB_TOKEN is required}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: climate-hub-redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  api:
+    image: climatehub/api:${CLIMATE_HUB_VERSION:-latest}
+    container_name: climate-hub-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Postgres__ConnectionString: "Host=postgres;Port=5432;Database=climate_hub;Username=climate_hub;Password=${POSTGRES_PASSWORD}"
+      Mqtt__Host: mosquitto
+      Mqtt__Port: "1883"
+      Mqtt__ClientId: climate-hub-api
+      Mqtt__Username: ${MQTT_API_USERNAME:-climate-hub-api}
+      Mqtt__Password: ${MQTT_API_PASSWORD:?MQTT_API_PASSWORD is required}
+      InfluxDb__Url: http://influxdb:8086
+      InfluxDb__Token: ${INFLUXDB_TOKEN}
+      InfluxDb__Organization: ${INFLUXDB_ORG:-climate-hub}
+      InfluxDb__Bucket: ${INFLUXDB_BUCKET:-climate-hub}
+      Jwt__Issuer: ${JWT_ISSUER:-climate-hub}
+      Jwt__Audience: ${JWT_AUDIENCE:-climate-hub-api}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  device-gateway:
+    image: climatehub/gateway:${CLIMATE_HUB_VERSION:-latest}
+    container_name: climate-hub-gateway
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      Postgres__ConnectionString: "Host=postgres;Port=5432;Database=climate_hub;Username=climate_hub;Password=${POSTGRES_PASSWORD}"
+      Mqtt__Host: mosquitto
+      Mqtt__Port: "1883"
+      Mqtt__ClientId: climate-hub-device-gateway
+      Mqtt__Username: ${MQTT_GATEWAY_USERNAME:-climate-hub-gateway}
+      Mqtt__Password: ${MQTT_GATEWAY_PASSWORD:?MQTT_GATEWAY_PASSWORD is required}
+      InfluxDb__Url: http://influxdb:8086
+      InfluxDb__Token: ${INFLUXDB_TOKEN}
+      InfluxDb__Organization: ${INFLUXDB_ORG:-climate-hub}
+      InfluxDb__Bucket: ${INFLUXDB_BUCKET:-climate-hub}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5001/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  migrator:
+    image: climatehub/api:${CLIMATE_HUB_VERSION:-latest}
+    container_name: climate-hub-migrator
+    environment:
+      ASPNETCORE_ENVIRONMENT: Migration
+      Postgres__ConnectionString: "Host=postgres;Port=5432;Database=climate_hub;Username=climate_hub;Password=${POSTGRES_PASSWORD}"
+    command: ["dotnet", "ClimateHub.Api.dll", "--migrate-only"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - climate-hub-net
+    restart: "no"
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: climate-hub-caddy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+      - ./certificates:/certificates:ro
+    depends_on:
+      - api
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  mosquitto-data:
+  mosquitto-log:
+  influxdb-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  climate-hub-net:
+    driver: bridge

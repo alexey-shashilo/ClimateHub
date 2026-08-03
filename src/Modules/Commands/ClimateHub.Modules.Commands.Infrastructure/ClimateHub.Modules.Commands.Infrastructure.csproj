@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClimateHub.Modules.Commands.Domain\ClimateHub.Modules.Commands.Domain.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.Commands.Application\ClimateHub.Modules.Commands.Application.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.Commands.Contracts\ClimateHub.Modules.Commands.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\ClimateHub.Infrastructure\ClimateHub.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Devices\ClimateHub.Modules.Devices.Contracts\ClimateHub.Modules.Devices.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

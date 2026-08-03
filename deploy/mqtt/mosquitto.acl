@@ -1,0 +1,19 @@
+# Climate Hub Mosquitto ACL
+# Format: user [read|write|readwrite] [topic filter]
+# Device ID is extracted from topic at position 3 (climate-hub/v1/{buildingId}/{deviceId}/...)
+# ACL enforces that device can only access its own namespace
+
+# Device Gateway — can subscribe to telemetry from any device, publish commands
+user climate-hub-gateway
+topic read climate-hub/v1/+/+/telemetry/+
+topic read climate-hub/v1/+/+/event/+
+topic read climate-hub/v1/+/+/status/+
+topic write climate-hub/v1/+/+/command/execute
+topic write climate-hub/v1/+/+/command/cancel
+
+# Per-device credentials — device ID is used as MQTT username
+# Each device can only write to its own telemetry path
+# Pattern: climate-hub/v1/{buildingId}/{deviceId}/telemetry/#
+# The device's username is the deviceId; ACL checks topic matches username
+user climate-hub-simulator
+topic write climate-hub/v1/+/climate-hub-simulator/telemetry/+

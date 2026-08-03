@@ -1,0 +1,59 @@
+# Climate Hub - Caddy Reverse Proxy Configuration
+# Supports both local deployment and public domain with ACME
+
+# Local deployment (use environment variable to switch)
+{$DOMAIN:localhost:8080} {
+    tls {$TLS_MODE:internal}
+
+    # Security headers
+    header {
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'"
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Frame-Options DENY
+    }
+
+    # Frontend static files
+    root * /srv/frontend
+    try_files {path} /index.html
+
+    # API proxy
+    @api {
+        path /api/*
+    }
+    handle @api {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # SSE support: no buffering, no compression
+    @sse {
+        path /api/v1/events*
+    }
+    handle @sse {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            flush_interval -1
+        }
+    }
+
+    # Health endpoint passthrough
+    @health {
+        path /health/*
+    }
+    handle @health {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}

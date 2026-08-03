@@ -1,0 +1,50 @@
+{
+  "name": "climate-hub-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "openapi:validate": "swagger-cli validate ../openapi/climate-hub-v1.yaml"
+  },
+  "dependencies": {
+    "@mantine/charts": "^9.5.0",
+    "@mantine/core": "^9.5.0",
+    "@mantine/hooks": "^9.5.0",
+    "@mantine/notifications": "^9.5.0",
+    "@tabler/icons-react": "^3.46.0",
+    "@tanstack/react-query": "^5.101.4",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "msw": "^2.15.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-cli": "^4.0.4",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^30.0.1",
+    "postcss": "^8.5.25",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "swagger-parser": "^10.0.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}

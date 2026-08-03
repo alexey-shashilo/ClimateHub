@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClimateHub.Modules.Devices.Domain\ClimateHub.Modules.Devices.Domain.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.Devices.Application\ClimateHub.Modules.Devices.Application.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.Devices.Contracts\ClimateHub.Modules.Devices.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\ClimateHub.Infrastructure\ClimateHub.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

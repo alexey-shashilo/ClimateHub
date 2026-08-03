@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClimateHub.Modules.Commands.Domain\ClimateHub.Modules.Commands.Domain.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.Commands.Contracts\ClimateHub.Modules.Commands.Contracts.csproj" />
+    <ProjectReference Include="..\..\Devices\ClimateHub.Modules.Devices.Contracts\ClimateHub.Modules.Devices.Contracts.csproj" />
+    <ProjectReference Include="..\..\Building\ClimateHub.Modules.Building.Contracts\ClimateHub.Modules.Building.Contracts.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

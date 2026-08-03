@@ -1,0 +1,64 @@
+@import '@mantine/core/styles.css';
+@import '@mantine/notifications/styles.css';
+@import '@mantine/charts/styles.css';
+
+:root {
+  --scrollbar-width: 8px;
+  --focus-ring-color: #2f9a72;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-gray-4);
+  border-radius: 4px;
+}
+
+[data-mantine-color-scheme='dark'] ::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-gray-7);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mantine-color-gray-5);
+}
+
+/* Selection */
+::selection {
+  background: var(--mantine-color-climate-2);
+  color: inherit;
+}
+
+[data-mantine-color-scheme='dark'] ::selection {
+  background: var(--mantine-color-climate-8);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Numeric tabular figures */
+.metric-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}

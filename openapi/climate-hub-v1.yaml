@@ -1,0 +1,1403 @@
+openapi: "3.0.3"
+info:
+  title: Climate Hub API — Need Engine Closed Loop
+  version: "1.1.0"
+  description: |
+    REST API локальной платформы управления микроклиматом здания.
+    Реализован замкнутый контур Need Engine: Environment → Need → Capability →
+    Device → Command → Effect → Satisfaction.
+servers:
+  - url: /api/v1
+    description: Climate Hub API
+
+paths:
+  # ────────────────────── Buildings ──────────────────────
+  /buildings:
+    get:
+      operationId: listBuildings
+      summary: Список зданий
+      tags: [Buildings]
+      responses:
+        "200":
+          description: Список зданий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BuildingSummary"
+
+  /buildings/{buildingId}:
+    get:
+      operationId: getBuilding
+      summary: Информация о здании
+      tags: [Buildings]
+      parameters:
+        - name: buildingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные здания
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /buildings/{buildingId}/floors:
+    get:
+      operationId: getBuildingFloors
+      summary: Этажи здания с помещениями
+      tags: [Buildings]
+      parameters:
+        - name: buildingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Список этажей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FloorSummary"
+
+  # ────────────────────── Floors / Rooms ──────────────────────
+  /floors/{floorId}/rooms:
+    get:
+      operationId: getFloorRooms
+      summary: Список помещений этажа
+      tags: [Rooms]
+      parameters:
+        - name: floorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Список помещений
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomSummary"
+
+  /rooms/{roomId}:
+    get:
+      operationId: getRoom
+      summary: Информация о помещении
+      tags: [Rooms]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные помещения
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ────────────────────── Policy ──────────────────────
+  /rooms/{roomId}/policy:
+    get:
+      operationId: getRoomPolicy
+      summary: Политика помещения
+      tags: [Policy]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Политика помещения
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomPolicyResponse"
+    put:
+      operationId: updateRoomPolicy
+      summary: Обновить политику помещения
+      tags: [Policy]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyUpdateRequest"
+      responses:
+        "204":
+          description: Политика обновлена
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  # ────────────────────── Environment ──────────────────────
+  /rooms/{roomId}/environment:
+    get:
+      operationId: getRoomEnvironment
+      summary: Текущее состояние среды помещения
+      tags: [Environment]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Текущее состояние
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomEnvironmentResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rooms/{roomId}/environment/history:
+    get:
+      operationId: getRoomEnvironmentHistory
+      summary: История параметров среды
+      tags: [Environment]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: parameter
+          in: query
+          schema:
+            type: string
+            enum: [temperature, humidity, co2]
+      responses:
+        "200":
+          description: История параметра
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentHistoryResponse"
+
+  # ────────────────────── Devices ──────────────────────
+  /devices:
+    get:
+      operationId: listDevices
+      summary: Реестр устройств
+      tags: [Devices]
+      responses:
+        "200":
+          description: Список устройств
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeviceSummary"
+    post:
+      operationId: registerDevice
+      summary: Регистрация устройства
+      tags: [Devices]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceRequest"
+      responses:
+        "201":
+          description: Устройство зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceSummary"
+
+  /devices/{deviceId}:
+    get:
+      operationId: getDevice
+      summary: Карточка устройства
+      tags: [Devices]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные устройства
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /devices/{deviceId}/assignments:
+    post:
+      operationId: assignDevice
+      summary: Назначить устройство в помещение
+      tags: [Devices]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomId:
+                  type: string
+                  format: uuid
+              required: [roomId]
+      responses:
+        "200":
+          description: Устройство назначено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceSummary"
+
+  /rooms/{roomId}/devices:
+    get:
+      operationId: getRoomDevices
+      summary: Устройства помещения
+      tags: [Devices]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Список устройств помещения
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeviceSummary"
+
+  # ────────────────────── Commands ──────────────────────
+  /commands:
+    post:
+      operationId: createCommand
+      summary: Создать команду
+      tags: [Commands]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommandRequest"
+      responses:
+        "201":
+          description: Команда создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResponse"
+    get:
+      operationId: listCommands
+      summary: Список команд
+      tags: [Commands]
+      responses:
+        "200":
+          description: Список команд
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommandResponse"
+
+  /commands/{commandId}:
+    get:
+      operationId: getCommand
+      summary: Информация о команде
+      tags: [Commands]
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Данные команды
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /commands/{commandId}/cancel:
+    post:
+      operationId: cancelCommand
+      summary: Отменить команду
+      tags: [Commands]
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Команда отменена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResponse"
+
+  # ────────────────────── Needs ──────────────────────
+  /needs:
+    get:
+      operationId: listNeeds
+      summary: Список активных потребностей
+      tags: [Needs]
+      parameters:
+        - name: roomId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/NeedType"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/NeedStatus"
+        - name: severity
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/NeedSeverity"
+        - name: controlMode
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ControlMode"
+        - name: activeOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: blockedOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Список потребностей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NeedResponse"
+
+  /needs/{needId}:
+    get:
+      operationId: getNeed
+      summary: Детали потребности
+      tags: [Needs]
+      parameters:
+        - name: needId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Детали потребности
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NeedDetailResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /needs/rooms/{roomId}:
+    get:
+      operationId: getNeedsByRoom
+      summary: Потребности помещения
+      tags: [Needs]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Потребности помещения
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NeedResponse"
+
+  /needs/buildings/{buildingId}:
+    get:
+      operationId: getNeedsByBuilding
+      summary: Потребности здания
+      tags: [Needs]
+      parameters:
+        - name: buildingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Потребности здания
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NeedResponse"
+
+  /needs/rooms/{roomId}/evaluate:
+    post:
+      operationId: evaluateRoom
+      summary: Запустить оценку потребностей помещения
+      tags: [Needs]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Оценка выполнена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: evaluated
+
+  /needs/{needId}/evaluate:
+    post:
+      operationId: evaluateNeed
+      summary: Запустить планирование для потребности
+      tags: [Needs]
+      parameters:
+        - name: needId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Планирование выполнено
+
+  /needs/{needId}/execute:
+    post:
+      operationId: executeNeed
+      summary: Выполнить потребность (создать команду)
+      tags: [Needs]
+      parameters:
+        - name: needId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Команда создана
+        "400":
+          description: Некорректный запрос
+        "409":
+          description: Уже есть активная команда
+
+  /needs/{needId}/cancel:
+    post:
+      operationId: cancelNeed
+      summary: Отменить потребность
+      tags: [Needs]
+      parameters:
+        - name: needId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Потребность отменена
+
+  /needs/{needId}/unblock:
+    post:
+      operationId: unblockNeed
+      summary: Разблокировать потребность
+      tags: [Needs]
+      parameters:
+        - name: needId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Потребность разблокирована
+
+  /needs/{needId}/evaluations:
+    get:
+      operationId: getNeedEvaluations
+      summary: История оценок потребности
+      tags: [Needs]
+      parameters:
+        - name: needId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: История оценок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NeedEvaluationResponse"
+
+  # ────────────────────── SSE Events ──────────────────────
+  /events/environment/{roomId}:
+    get:
+      operationId: streamRoomEvents
+      summary: SSE события помещения
+      tags: [Events]
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: SSE поток
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /events/all:
+    get:
+      operationId: streamAllEvents
+      summary: SSE все события
+      tags: [Events]
+      responses:
+        "200":
+          description: SSE поток
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  # ────────────────────── Health ──────────────────────
+  /health/live:
+    get:
+      operationId: healthLive
+      summary: Liveness probe
+      tags: [Health]
+      responses:
+        "200":
+          description: Сервис жив
+
+  /health/ready:
+    get:
+      operationId: healthReady
+      summary: Readiness probe
+      tags: [Health]
+      responses:
+        "200":
+          description: Сервис готов
+        "503":
+          description: Сервис не готов
+
+components:
+  schemas:
+    # ── Policy ──
+    RoomPolicyResponse:
+      type: object
+      properties:
+        temperature:
+          $ref: "#/components/schemas/PolicyDimension"
+        humidity:
+          $ref: "#/components/schemas/PolicyDimension"
+        co2:
+          $ref: "#/components/schemas/PolicyDimension"
+        illuminance:
+          $ref: "#/components/schemas/PolicyDimension"
+
+    PolicyDimension:
+      type: object
+      properties:
+        minimum:
+          type: number
+          nullable: true
+        maximum:
+          type: number
+          nullable: true
+        preferred:
+          type: number
+          nullable: true
+        controlMode:
+          $ref: "#/components/schemas/ControlMode"
+
+    PolicyUpdateRequest:
+      type: object
+      properties:
+        temperature:
+          $ref: "#/components/schemas/PolicyBoundDto"
+        humidity:
+          $ref: "#/components/schemas/PolicyBoundDto"
+        co2:
+          $ref: "#/components/schemas/PolicyBoundDto"
+        illuminance:
+          $ref: "#/components/schemas/PolicyBoundDto"
+
+    PolicyBoundDto:
+      type: object
+      properties:
+        minimum:
+          type: number
+          nullable: true
+        maximum:
+          type: number
+          nullable: true
+        preferred:
+          type: number
+          nullable: true
+        controlMode:
+          $ref: "#/components/schemas/ControlMode"
+
+    ControlMode:
+      type: string
+      enum: [disabled, monitorOnly, manual, automatic]
+
+    # ── Needs ──
+    NeedType:
+      type: string
+      enum: [temperatureHeating, temperatureCooling, humidityIncrease, humidityDecrease, co2Reduction, illuminanceIncrease, illuminanceDecrease]
+
+    NeedStatus:
+      type: string
+      enum: [detected, planning, planned, executing, waitingForEffect, satisfied, blocked, cancelled, expired]
+
+    NeedSeverity:
+      type: string
+      enum: [low, medium, high, critical]
+
+    NeedResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        buildingId:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/NeedType"
+        status:
+          $ref: "#/components/schemas/NeedStatus"
+        severity:
+          $ref: "#/components/schemas/NeedSeverity"
+        controlMode:
+          $ref: "#/components/schemas/ControlMode"
+        currentValue:
+          type: number
+          nullable: true
+        deviation:
+          type: number
+        desiredMin:
+          type: number
+        desiredMax:
+          type: number
+        desiredPreferred:
+          type: number
+        sourceParameterCode:
+          type: string
+          nullable: true
+        selectedCapabilityCode:
+          type: string
+          nullable: true
+        selectedDeviceId:
+          type: string
+          format: uuid
+          nullable: true
+        activeCommandId:
+          type: string
+          format: uuid
+          nullable: true
+        planningFailureCode:
+          type: string
+          nullable: true
+        violationSince:
+          type: string
+          format: date-time
+          nullable: true
+        stableSince:
+          type: string
+          format: date-time
+          nullable: true
+        cooldownUntil:
+          type: string
+          format: date-time
+          nullable: true
+        effectEvaluationDueAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastEvaluationAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+
+    NeedDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        buildingId:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/NeedType"
+        status:
+          $ref: "#/components/schemas/NeedStatus"
+        severity:
+          $ref: "#/components/schemas/NeedSeverity"
+        controlMode:
+          $ref: "#/components/schemas/ControlMode"
+        currentValue:
+          type: number
+          nullable: true
+        desiredRange:
+          type: object
+          properties:
+            minimum:
+              type: number
+            maximum:
+              type: number
+            preferred:
+              type: number
+        deviation:
+          type: number
+        sourceParameter:
+          type: string
+          nullable: true
+        sourceMeasuredAt:
+          type: string
+          format: date-time
+          nullable: true
+        recommendation:
+          type: object
+          properties:
+            capabilityCode:
+              type: string
+            operation:
+              type: string
+            requestedValue:
+              type: number
+            unit:
+              type: string
+            deviceId:
+              type: string
+              format: uuid
+          nullable: true
+        activeCommandId:
+          type: string
+          format: uuid
+          nullable: true
+        planningFailureCode:
+          type: string
+          nullable: true
+        violationSince:
+          type: string
+          format: date-time
+          nullable: true
+        stableSince:
+          type: string
+          format: date-time
+          nullable: true
+        cooldownUntil:
+          type: string
+          format: date-time
+          nullable: true
+        effectEvaluationDueAt:
+          type: string
+          format: date-time
+          nullable: true
+        detectedAt:
+          type: string
+          format: date-time
+        lastEvaluationAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+
+    NeedEvaluationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        needId:
+          type: string
+          format: uuid
+        trigger:
+          type: string
+        previousStatus:
+          type: string
+          nullable: true
+        newStatus:
+          type: string
+          nullable: true
+        outcome:
+          type: string
+          nullable: true
+        failureCode:
+          type: string
+          nullable: true
+        commandId:
+          type: string
+          format: uuid
+          nullable: true
+        evaluatedAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          nullable: true
+
+    NeedEvaluationTrigger:
+      type: string
+      enum: [environmentStateChanged, roomPolicyChanged, deviceAssignmentChanged, deviceCapabilityChanged, deviceConnectivityChanged, commandSucceeded, commandFailed, commandTimedOut, commandCancelled, commandRejected, cooldownExpired, effectEvaluationDue, periodicReconciliation, manualRequest, startupRecovery]
+
+    CreateCommandRequest:
+      type: object
+      properties:
+        buildingId:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        capabilityCode:
+          type: string
+        operation:
+          type: string
+        parametersJson:
+          type: string
+        priority:
+          type: string
+        createdBy:
+          type: string
+      required: [buildingId, deviceId, capabilityCode, operation]
+
+    CommandResponse:
+      type: object
+      properties:
+        commandId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        buildingId:
+          type: string
+          format: uuid
+        roomId:
+          type: string
+          format: uuid
+          nullable: true
+        deviceId:
+          type: string
+          format: uuid
+        capabilityCode:
+          type: string
+        operation:
+          type: string
+        parameters:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+
+    # ── Buildings ──
+    BuildingSummary:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - floorsCount
+        - roomsCount
+        - roomsWithWarnings
+        - devicesOnline
+        - devicesOffline
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [normal, warning, critical, offline, unknown]
+        floorsCount:
+          type: integer
+        roomsCount:
+          type: integer
+        roomsWithWarnings:
+          type: integer
+        devicesOnline:
+          type: integer
+        devicesOffline:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    FloorSummary:
+      type: object
+      required:
+        - id
+        - buildingId
+        - name
+        - number
+        - rooms
+      properties:
+        id:
+          type: string
+          format: uuid
+        buildingId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        number:
+          type: integer
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoomSummary"
+
+    RoomSummary:
+      type: object
+      required:
+        - id
+        - floorId
+        - name
+        - status
+        - environment
+        - activeWarningsCount
+        - devicesOnline
+        - devicesTotal
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        floorId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [normal, warning, critical, offline, stale, unknown]
+        environment:
+          $ref: "#/components/schemas/RoomEnvironmentSummary"
+        activeWarningsCount:
+          type: integer
+        devicesOnline:
+          type: integer
+        devicesTotal:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    RoomEnvironmentSummary:
+      type: object
+      properties:
+        temperatureC:
+          type: number
+          nullable: true
+        relativeHumidityPct:
+          type: number
+          nullable: true
+        co2Ppm:
+          type: number
+          nullable: true
+        quality:
+          $ref: "#/components/schemas/MeasurementQuality"
+
+    MeasurementQuality:
+      type: string
+      enum: [valid, estimated, stale, outOfRange, sensorError, rejected, unknown]
+
+    RoomEnvironmentResponse:
+      type: object
+      required:
+        - roomId
+        - roomName
+        - status
+        - parameters
+        - updatedAt
+      properties:
+        roomId:
+          type: string
+          format: uuid
+        roomName:
+          type: string
+        status:
+          type: string
+          enum: [normal, warning, critical, offline, stale, unknown]
+        parameters:
+          type: object
+          properties:
+            temperature:
+              $ref: "#/components/schemas/EnvironmentParameter"
+            relativeHumidity:
+              $ref: "#/components/schemas/EnvironmentParameter"
+            co2:
+              $ref: "#/components/schemas/EnvironmentParameter"
+        updatedAt:
+          type: string
+          format: date-time
+
+    EnvironmentParameter:
+      type: object
+      required:
+        - value
+        - unit
+        - measuredAt
+        - receivedAt
+        - quality
+        - sourceDeviceId
+      properties:
+        value:
+          type: number
+        unit:
+          type: string
+        measuredAt:
+          type: string
+          format: date-time
+        receivedAt:
+          type: string
+          format: date-time
+        quality:
+          $ref: "#/components/schemas/MeasurementQuality"
+        sourceDeviceId:
+          type: string
+          format: uuid
+        target:
+          $ref: "#/components/schemas/EnvironmentTarget"
+
+    EnvironmentTarget:
+      type: object
+      properties:
+        minimum:
+          type: number
+        maximum:
+          type: number
+        preferred:
+          type: number
+
+    EnvironmentHistoryResponse:
+      type: object
+      required:
+        - roomId
+        - parameter
+        - unit
+        - from
+        - to
+        - aggregation
+        - points
+      properties:
+        roomId:
+          type: string
+          format: uuid
+        parameter:
+          type: string
+          enum: [temperature, humidity, co2]
+        unit:
+          type: string
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        aggregation:
+          type: string
+          enum: [raw, 1m, 15m, 1h]
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/EnvironmentHistoryPoint"
+
+    EnvironmentHistoryPoint:
+      type: object
+      required:
+        - timestamp
+        - value
+        - quality
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        value:
+          type: number
+        quality:
+          $ref: "#/components/schemas/MeasurementQuality"
+
+    DeviceSummary:
+      type: object
+      required:
+        - id
+        - hardwareId
+        - name
+        - model
+        - deviceType
+        - status
+        - connectivity
+        - capabilities
+      properties:
+        id:
+          type: string
+          format: uuid
+        hardwareId:
+          type: string
+        name:
+          type: string
+        model:
+          type: string
+        deviceType:
+          type: string
+        status:
+          type: string
+          enum: [registered, active, inactive, decommissioned]
+        connectivity:
+          type: string
+          enum: [online, offline, suspected, synchronizing, operational]
+        firmwareVersion:
+          type: string
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+        assignedRoomId:
+          type: string
+          format: uuid
+          nullable: true
+        assignedRoomName:
+          type: string
+          nullable: true
+        capabilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceCapability"
+
+    DeviceCapability:
+      type: object
+      required:
+        - code
+        - kind
+        - writable
+        - available
+      properties:
+        code:
+          type: string
+        kind:
+          type: string
+          enum: [measurement, control, system]
+        unit:
+          type: string
+        minimum:
+          type: number
+          nullable: true
+        maximum:
+          type: number
+          nullable: true
+        writable:
+          type: boolean
+        available:
+          type: boolean
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - hardwareId
+        - name
+        - manufacturer
+        - modelName
+        - protocolVersion
+      properties:
+        hardwareId:
+          type: string
+        name:
+          type: string
+        manufacturer:
+          type: string
+        modelName:
+          type: string
+        hardwareVersion:
+          type: string
+        protocolVersion:
+          type: string
+
+    ApiProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errorCode:
+          type: string
+        traceId:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+  responses:
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblemDetails"
+    ValidationError:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblemDetails"
+    Conflict:
+      description: Конфликт
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiProblemDetails"

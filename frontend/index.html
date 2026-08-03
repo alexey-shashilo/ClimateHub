@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function() {
+        var key = 'climate-hub:appearance';
+        var mode, scheme;
+        try { mode = localStorage.getItem(key); } catch(e) {}
+        if (mode !== 'light' && mode !== 'dark' && mode !== 'system') mode = 'system';
+        if (mode === 'system') {
+          scheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } else {
+          scheme = mode;
+        }
+        document.documentElement.setAttribute('data-mantine-color-scheme', scheme);
+        document.documentElement.style.colorScheme = scheme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', scheme === 'dark' ? '#1a1b1e' : '#ffffff');
+      })();
+    </script>
+    <title>Climate Hub</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

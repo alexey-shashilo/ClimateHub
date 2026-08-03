@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\ClimateHub.Modules.Devices.Domain\ClimateHub.Modules.Devices.Domain.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.Devices.Contracts\ClimateHub.Modules.Devices.Contracts.csproj" />
+    <ProjectReference Include="..\..\Building\ClimateHub.Modules.Building.Contracts\ClimateHub.Modules.Building.Contracts.csproj" />
+  </ItemGroup>
+</Project>
