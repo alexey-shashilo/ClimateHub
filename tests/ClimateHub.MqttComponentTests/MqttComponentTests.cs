@@ -22,11 +22,22 @@ public class MqttComponentTests : IAsyncLifetime
 
     public MqttComponentTests()
     {
-        var testConfigPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "deploy", "mqtt", "mosquitto.test.conf"));
+        var mosquittoConfig = new[]
+        {
+            "listener 1883",
+            "protocol mqtt",
+            "allow_anonymous true",
+            "persistence false",
+            "log_dest stdout",
+            "log_type all"
+        };
+
         _mosquittoContainer = new ContainerBuilder()
             .WithImage("eclipse-mosquitto:2.0.20")
             .WithPortBinding(1883, true)
-            .WithBindMount(testConfigPath, "/mosquitto/config/mosquitto.conf")
+            .WithResourceMapping(
+                Encoding.UTF8.GetBytes(string.Join("\n", mosquittoConfig)),
+                "/mosquitto/config/mosquitto.conf")
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(1883))
             .Build();
     }
