@@ -13,9 +13,17 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="MQTTnet" />
     <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ClimateHub.Api\ClimateHub.Api.csproj" />
+    <ProjectReference Include="..\..\src\ClimateHub.DeviceGateway\ClimateHub.DeviceGateway.csproj" />
+    <ProjectReference Include="..\..\src\ClimateHub.SharedKernel\ClimateHub.SharedKernel.csproj" />
   </ItemGroup>
 </Project>
