@@ -122,7 +122,7 @@ public class ClimatePlanner
             plan, roomId, ct);
 
         if (results.All(r => r.Success))
-            plan.Complete();
+            plan.WaitForEffect();
         else if (results.Any(r => r.Success))
             plan.PartiallyComplete();
         else

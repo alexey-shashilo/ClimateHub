@@ -1,15 +1,32 @@
 name: Integration and E2E
 
 on:
-  workflow_run:
-    workflows: [Build and Test]
-    types: [completed]
+  pull_request:
+    branches: [main]
+  push:
     branches: [main, remediation/**]
 
 jobs:
-  integration:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  mqtt-tests:
     runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build
+
+      - name: MQTT Component Tests
+        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests"
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -26,5 +43,19 @@ jobs:
         env:
           Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
 
-      - name: MQTT Component Tests
-        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests"
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build
+
+      - name: End-to-End Tests
+        run: dotnet test --filter "Category=E2E"
