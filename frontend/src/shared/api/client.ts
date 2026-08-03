@@ -70,7 +70,7 @@ let _client: ApiClient | null = null;
 
 export function getApiClient(): ApiClient {
   if (!_client) {
-    _client = createApiClient(import.meta.env.VITE_API_BASE_URL ?? '/api/v1');
+    _client = createApiClient(import.meta.env.VITE_API_BASE_URL ?? '');
   }
   return _client;
 }
