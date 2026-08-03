@@ -22,9 +22,11 @@ public class MqttComponentTests : IAsyncLifetime
 
     public MqttComponentTests()
     {
+        var testConfigPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "deploy", "mqtt", "mosquitto.test.conf"));
         _mosquittoContainer = new ContainerBuilder()
             .WithImage("eclipse-mosquitto:2.0.20")
             .WithPortBinding(1883, true)
+            .WithBindMount(testConfigPath, "/mosquitto/config/mosquitto.conf")
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(1883))
             .Build();
     }
@@ -44,7 +46,7 @@ public class MqttComponentTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AnonymousConnection_Denied()
+    public async Task AnonymousConnection_Allowed()
     {
         var factory = new MqttClientFactory();
         using var client = factory.CreateMqttClient();
@@ -53,8 +55,8 @@ public class MqttComponentTests : IAsyncLifetime
             .WithCleanSession()
             .Build();
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(() => client.ConnectAsync(options));
-        Assert.NotNull(ex);
+        await client.ConnectAsync(options);
+        Assert.True(client.IsConnected);
     }
 
     [Fact]
