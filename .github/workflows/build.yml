@@ -39,17 +39,17 @@ jobs:
       - name: Vulnerability Scan
         run: dotnet list package --vulnerable --include-transitive
       - name: Architecture Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~ArchitectureTests" --logger "trx;LogFileName=architecture.trx"
+        run: dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx"
       - name: Unit Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~UnitTests" --logger "trx;LogFileName=unit.trx"
+        run: dotnet test tests/ClimateHub.UnitTests --logger "trx;LogFileName=unit.trx"
       - name: Device Gateway Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~DeviceGatewayTests" --logger "trx;LogFileName=gateway.trx"
+        run: dotnet test tests/ClimateHub.DeviceGatewayTests --logger "trx;LogFileName=gateway.trx"
       - name: Runtime Metrics Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~RuntimeMetricsTests" --logger "trx;LogFileName=metrics.trx"
+        run: dotnet test tests/ClimateHub.RuntimeMetricsTests --logger "trx;LogFileName=metrics.trx"
       - name: Hardware Abstraction Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~HardwareAbstractionTests" --logger "trx;LogFileName=hal.trx"
+        run: dotnet test tests/ClimateHub.HardwareAbstractionTests --logger "trx;LogFileName=hal.trx"
       - name: Deployment Config Tests
-        run: dotnet test --no-build --filter "Category=Deployment" --logger "trx;LogFileName=deploy-config.trx"
+        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "Category=Deployment" --logger "trx;LogFileName=deploy-config.trx"
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4

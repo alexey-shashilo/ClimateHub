@@ -18,7 +18,7 @@ jobs:
       - name: Build
         run: dotnet build
       - name: MQTT Component Tests
-        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests" --logger "trx;LogFileName=mqtt.trx"
+        run: dotnet test tests/ClimateHub.MqttComponentTests --logger "trx;LogFileName=mqtt.trx"
       - name: Upload MQTT Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -37,7 +37,7 @@ jobs:
       - name: Build
         run: dotnet build
       - name: End-to-End Tests
-        run: dotnet test --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx"
+        run: dotnet test tests/ClimateHub.EndToEndTests --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx"
         env:
           DOCKER_HOST: unix:///var/run/docker.sock
       - name: Upload E2E Results
@@ -58,7 +58,7 @@ jobs:
       - name: Build
         run: dotnet build
       - name: Runtime Recovery Tests
-        run: dotnet test --filter "FullyQualifiedName~RuntimeRecoveryTests" --logger "trx;LogFileName=recovery.trx"
+        run: dotnet test tests/ClimateHub.RuntimeRecoveryTests --logger "trx;LogFileName=recovery.trx"
       - name: Upload Recovery Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -77,9 +77,9 @@ jobs:
       - name: Build
         run: dotnet build
       - name: Backup/Restore Tests
-        run: dotnet test --filter "FullyQualifiedName~BackupRestoreTests" --logger "trx;LogFileName=backup.trx"
+        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~BackupRestoreTests" --logger "trx;LogFileName=backup.trx"
       - name: Deploy Full Stack Tests
-        run: dotnet test --filter "FullyQualifiedName~DeploymentVerificationTests&!Category=Deployment" --logger "trx;LogFileName=deploy-full.trx"
+        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~DeploymentVerificationTests&!Category=Deployment" --logger "trx;LogFileName=deploy-full.trx"
       - name: Upload Deploy Results
         if: always()
         uses: actions/upload-artifact@v4
