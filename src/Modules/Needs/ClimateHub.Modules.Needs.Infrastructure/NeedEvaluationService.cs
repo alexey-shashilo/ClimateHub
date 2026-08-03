@@ -6,8 +6,11 @@ using ClimateHub.Modules.Commands.Contracts;
 using ClimateHub.Modules.Devices.Contracts;
 using ClimateHub.Modules.EngineeringSystems.Contracts;
 using ClimateHub.Modules.Environment.Contracts;
+using ClimateHub.Modules.Needs.Contracts;
 using ClimateHub.Modules.Needs.Domain;
 using ClimateHub.Modules.Needs.Domain.Repositories;
+using NeedEvaluationTrigger = ClimateHub.Modules.Needs.Domain.NeedEvaluationTrigger;
+using NeedStatus = ClimateHub.Modules.Needs.Domain.NeedStatus;
 using ClimateHub.SharedKernel.Primitives;
 using Microsoft.Extensions.Logging;
 using CmdId = ClimateHub.Modules.Needs.Domain.CommandId;
@@ -30,6 +33,7 @@ public class NeedEvaluationService
     private readonly RoomEvaluationLock _roomLock;
     private readonly AntiOscillationOptions _antiOscillation;
     private readonly NeedDeviceResolver _deviceResolver;
+    private readonly IRoomBuildingResolver _roomBuildingResolver;
     private readonly ILogger<NeedEvaluationService> _logger;
 
     public NeedEvaluationService(
@@ -47,6 +51,7 @@ public class NeedEvaluationService
         RoomEvaluationLock roomLock,
         AntiOscillationOptions antiOscillation,
         NeedDeviceResolver deviceResolver,
+        IRoomBuildingResolver roomBuildingResolver,
         ILogger<NeedEvaluationService> logger)
     {
         _envReader = envReader; _policyReader = policyReader; _needRepo = needRepo;
@@ -57,6 +62,7 @@ public class NeedEvaluationService
         _eventBus = eventBus;
         _internalEventOutbox = internalEventOutbox; _roomLock = roomLock;
         _antiOscillation = antiOscillation; _deviceResolver = deviceResolver;
+        _roomBuildingResolver = roomBuildingResolver;
         _logger = logger;
     }
 
@@ -65,6 +71,13 @@ public class NeedEvaluationService
         string? correlationId = null, string? causationId = null,
         CancellationToken ct = default)
     {
+        var buildingId = await _roomBuildingResolver.ResolveBuildingIdAsync(roomId, ct);
+        if (buildingId is null)
+        {
+            _logger.LogWarning("Room {RoomId} has no associated building, skipping evaluation", roomId);
+            return;
+        }
+
         var acquired = await _roomLock.TryAcquireAsync(roomId, ct);
         if (!acquired)
         {
@@ -97,16 +110,16 @@ public class NeedEvaluationService
 
                 if (needType is null)
                 {
-                    await HandleParameterInRangeAsync(roomId, param.Parameter, current, now, opts, trigger, correlationId, causationId, ct);
+                    await HandleParameterInRangeAsync(roomId, buildingId.Value.Value, param.Parameter, current, now, opts, trigger, correlationId, causationId, ct);
                     continue;
                 }
 
-                await HandleParameterOutOfRangeAsync(roomId, param.Parameter, current, needType.Value, severity, deviation, min, max, pref, policy, now, opts, trigger, correlationId, causationId, ct);
+                await HandleParameterOutOfRangeAsync(roomId, buildingId.Value.Value, param.Parameter, current, needType.Value, severity, deviation, min, max, pref, policy, now, opts, trigger, correlationId, causationId, ct);
             }
         }
     }
 
-    private async Task HandleParameterInRangeAsync(RoomId roomId, string parameter, double current, DateTimeOffset now,
+    private async Task HandleParameterInRangeAsync(RoomId roomId, Guid buildingId, string parameter, double current, DateTimeOffset now,
         ParameterOptions opts, NeedEvaluationTrigger trigger, string? correlationId, string? causationId,
         CancellationToken ct)
     {
@@ -165,7 +178,7 @@ public class NeedEvaluationService
         }
     }
 
-    private async Task HandleParameterOutOfRangeAsync(RoomId roomId, string parameter, double current,
+    private async Task HandleParameterOutOfRangeAsync(RoomId roomId, Guid buildingId, string parameter, double current,
         NeedType needType, NeedSeverity severity, double deviation, double min, double max, double pref,
         RoomPolicyDto? policy, DateTimeOffset now, ParameterOptions opts,
         NeedEvaluationTrigger trigger, string? correlationId, string? causationId,
@@ -187,7 +200,7 @@ public class NeedEvaluationService
         var evalState = await _evalStateRepo.GetByRoomAndParameterAsync(roomId, parameter, ct);
         if (evalState is null)
         {
-            evalState = RoomParameterEvaluationState.Create(BuildingId.From(Guid.Empty), roomId, parameter);
+            evalState = RoomParameterEvaluationState.Create(BuildingId.From(buildingId), roomId, parameter);
             evalState.RecordViolation(now);
             evalState.UpdateEvaluation(current, "Valid", now, now);
             await _evalStateRepo.AddAsync(evalState, ct);
@@ -219,7 +232,7 @@ public class NeedEvaluationService
         }
         else
         {
-            await CreateNewNeedAsync(roomId, needType, severity, deviation, current, min, max, pref, parameter, mode, policy, now, opts, trigger, correlationId, causationId, ct);
+            await CreateNewNeedAsync(roomId, BuildingId.From(buildingId), needType, severity, deviation, current, min, max, pref, parameter, mode, policy, now, opts, trigger, correlationId, causationId, ct);
         }
     }
 
@@ -283,7 +296,7 @@ public class NeedEvaluationService
         }
     }
 
-    private async Task CreateNewNeedAsync(RoomId roomId, NeedType needType, NeedSeverity severity,
+    private async Task CreateNewNeedAsync(RoomId roomId, BuildingId buildingId, NeedType needType, NeedSeverity severity,
         double deviation, double current, double min, double max, double pref,
         string parameter, ControlMode mode, RoomPolicyDto? policy, DateTimeOffset now,
         ParameterOptions opts, NeedEvaluationTrigger trigger, string? correlationId, string? causationId,
@@ -304,7 +317,7 @@ public class NeedEvaluationService
         }
 
         var need = Need.Create(
-            BuildingId.From(Guid.Empty), roomId, needType, severity,
+            buildingId, roomId, needType, severity,
             min, max, pref, current, deviation, parameter, mode);
 
         need.SetViolationSince();

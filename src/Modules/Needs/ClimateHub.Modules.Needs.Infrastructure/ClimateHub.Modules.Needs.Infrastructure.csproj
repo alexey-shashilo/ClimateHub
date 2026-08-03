@@ -11,6 +11,8 @@
     <ProjectReference Include="..\..\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Domain\ClimateHub.Modules.EngineeringSystems.Domain.csproj" />
     <ProjectReference Include="..\..\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Contracts\ClimateHub.Modules.EngineeringSystems.Contracts.csproj" />
     <ProjectReference Include="..\..\Climate\ClimateHub.Modules.Climate.Contracts\ClimateHub.Modules.Climate.Contracts.csproj" />
+    <ProjectReference Include="..\..\Building\ClimateHub.Modules.Building.Domain\ClimateHub.Modules.Building.Domain.csproj" />
+    <ProjectReference Include="..\..\Building\ClimateHub.Modules.Building.Infrastructure\ClimateHub.Modules.Building.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -15,7 +15,7 @@ public class NeedCalculator
         _policyReader = policyReader;
     }
 
-    public async Task<NeedCalculationResult> CalculateAsync(RoomId roomId, CancellationToken ct = default)
+    public async Task<NeedCalculationResult> CalculateAsync(RoomId roomId, BuildingId buildingId, CancellationToken ct = default)
     {
         var parameters = await _envReader.GetParametersAsync(roomId, ct);
         var policy = await _policyReader.GetByRoomAsync(roomId, ct);
@@ -27,7 +27,7 @@ public class NeedCalculator
             var (type, desired, deviation, min, max) = ComputeNeed(param.Parameter, param.Value.Value, policy);
             if (type is null) continue;
             var severity = CalculateSeverity(deviation);
-            needs.Add(Need.Create(BuildingId.From(Guid.Empty), roomId, type.Value, severity, min, max, desired, param.Value.Value, deviation, param.Parameter));
+            needs.Add(Need.Create(buildingId, roomId, type.Value, severity, min, max, desired, param.Value.Value, deviation, param.Parameter));
         }
         return new NeedCalculationResult(needs, DateTimeOffset.UtcNow);
     }

@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<INeedModule, NeedModuleService>();
         services.AddSingleton<AntiOscillationOptions>(_ => AntiOscillationOptions.Default);
         services.AddScoped<NeedDeviceResolver>();
+        services.AddScoped<IRoomBuildingResolver, RoomBuildingResolver>();
         services.AddScoped<CommandTerminalEventHandlers>();
         services.AddScoped<RoomEnvironmentStateChangedHandler>();
         services.AddHostedService<NeedEngineWorker>();
