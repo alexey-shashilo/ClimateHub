@@ -1,8 +1,7 @@
-import { createBrowserRouter, Navigate, useNavigate, useLoaderData } from 'react-router-dom';
-import { buildingApi } from '@shared/api/endpoints';
-import { useEffect } from 'react';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '@shared/components/AppLayout';
 import { BuildingOverviewPage } from '@pages/building-overview/BuildingOverviewPage';
+import { BuildingListPage } from '@pages/building-overview/BuildingListPage';
 import { RoomDetailsPage } from '@pages/room-details/RoomDetailsPage';
 import { EnvironmentHistoryPage } from '@pages/room-details/EnvironmentHistoryPage';
 import { DevicesPage } from '@pages/devices/DevicesPage';
@@ -22,7 +21,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <AppLayout />,
     children: [
-      { index: true, element: <BuildingRedirect /> },
+      { index: true, element: <Navigate to="/buildings" replace /> },
       { path: 'buildings/:buildingId', element: <BuildingOverviewPage /> },
       { path: 'rooms/:roomId', element: <RoomDetailsPage /> },
       { path: 'rooms/:roomId/history', element: <EnvironmentHistoryPage /> },
