@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\ClimateHub.Modules.IAM.Domain\ClimateHub.Modules.IAM.Domain.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.IAM.Contracts\ClimateHub.Modules.IAM.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\ClimateHub.Infrastructure\ClimateHub.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ClimateHub.Modules.IAM.Domain\ClimateHub.Modules.IAM.Domain.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.IAM.Application\ClimateHub.Modules.IAM.Application.csproj" />
+    <ProjectReference Include="..\ClimateHub.Modules.IAM.Contracts\ClimateHub.Modules.IAM.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\ClimateHub.Infrastructure\ClimateHub.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
