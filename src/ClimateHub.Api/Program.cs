@@ -1,3 +1,4 @@
+using System.Text;
 using ClimateHub.Api;
 using ClimateHub.Api.Middleware;
 using ClimateHub.Infrastructure.Configuration;
@@ -12,7 +13,11 @@ using ClimateHub.Modules.Climate;
 using ClimateHub.Modules.Climate.Infrastructure;
 using ClimateHub.Modules.EngineeringSystems;
 using ClimateHub.Modules.EngineeringSystems.Infrastructure;
+using ClimateHub.Modules.IAM;
+using ClimateHub.Modules.IAM.Domain;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -33,6 +38,10 @@ try
     var postgresConnectionString = builder.Configuration.GetRequiredSection("Postgres:ConnectionString").Value
         ?? throw new InvalidOperationException("Postgres:ConnectionString is required");
 
+    var jwtSection = builder.Configuration.GetSection("Jwt");
+    var jwtSigningKey = jwtSection.GetValue<string>("SigningKey")
+        ?? throw new InvalidOperationException("Jwt:SigningKey is required");
+
     builder.Services.AddCors();
     builder.Services.AddClimateHubInfrastructure();
     builder.Services.AddInternalEventInfrastructure(postgresConnectionString);
@@ -44,6 +53,36 @@ try
     builder.Services.AddNeedsModule(postgresConnectionString);
     builder.Services.AddClimateModule(postgresConnectionString);
     builder.Services.AddEngineeringSystemsModule(postgresConnectionString);
+    builder.Services.AddIamModule(postgresConnectionString);
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSection.GetValue<string>("Issuer") ?? "ClimateHub",
+                ValidAudience = jwtSection.GetValue<string>("Audience") ?? "ClimateHub.Api",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+                ClockSkew = TimeSpan.Zero
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken))
+                        context.Token = accessToken;
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+    builder.Services.AddAuthorization();
 
     var app = builder.Build();
 
@@ -53,7 +92,9 @@ try
         .AllowAnyMethod()
         .AllowAnyHeader());
 
+    app.UseAuthentication();
     app.UseSerilogRequestLogging();
+    app.UseAuthorization();
     app.UseClimateHubProblemDetails();
 
     if (app.Environment.IsDevelopment())
@@ -74,6 +115,7 @@ try
             await sp.GetRequiredService<EngineeringSystemsDbContext>().Database.MigrateAsync();
             await sp.GetRequiredService<ClimateDbContext>().Database.MigrateAsync();
             await sp.GetRequiredService<InternalEventsDbContext>().Database.MigrateAsync();
+            await sp.GetRequiredService<ClimateHub.Modules.IAM.Infrastructure.IamDbContext>().Database.MigrateAsync();
             Log.Information("Database migrations applied successfully");
         }
         catch (Exception ex)
