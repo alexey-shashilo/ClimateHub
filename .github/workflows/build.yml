@@ -28,46 +28,63 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-
       - name: Restore
         run: dotnet restore
-
       - name: Build
         run: dotnet build --no-restore --warningsaserrors
-
-      - name: Architecture Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~ArchitectureTests"
-
-      - name: Unit Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~UnitTests"
-
-      - name: Smoke Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~SmokeTests"
-        env:
-          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
-
-      - name: Integration Tests
-        run: dotnet test --no-build --filter "FullyQualifiedName~IntegrationTests"
-        env:
-          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
-
       - name: Vulnerability Scan
         run: dotnet list package --vulnerable --include-transitive
-
       - name: Format Check
         run: dotnet format --verify-no-changes --no-restore
-
+      - name: Architecture Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~ArchitectureTests" --logger "trx;LogFileName=architecture.trx"
+      - name: Unit Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~UnitTests" --logger "trx;LogFileName=unit.trx"
+      - name: Device Gateway Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~DeviceGatewayTests" --logger "trx;LogFileName=gateway.trx"
+      - name: Smoke Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~SmokeTests" --logger "trx;LogFileName=smoke.trx"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+      - name: Integration Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~IntegrationTests" --logger "trx;LogFileName=integration.trx"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+      - name: Migration Verification
+        run: dotnet test --no-build --filter "FullyQualifiedName~MigrationVerification" --logger "trx;LogFileName=migration.trx"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+      - name: Runtime Metrics Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~RuntimeMetricsTests" --logger "trx;LogFileName=metrics.trx"
+      - name: Hardware Abstraction Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~HardwareAbstractionTests" --logger "trx;LogFileName=hal.trx"
+      - name: Deployment Verification
+        run: dotnet test --no-build --filter "FullyQualifiedName~DeploymentVerificationTests" --logger "trx;LogFileName=deploy.trx"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+      - name: Security Scan
+        run: |
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerabilities.txt
+          if grep -q "vulnerable" vulnerabilities.txt; then echo "Vulnerabilities found"; fi
+      - name: Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/*.trx'
+          retention-days: 7
       - name: Publish API
         run: dotnet publish src/ClimateHub.Api/ClimateHub.Api.csproj -c Release -o artifacts/api --no-restore
-
       - name: Publish DeviceGateway
         run: dotnet publish src/ClimateHub.DeviceGateway/ClimateHub.DeviceGateway.csproj -c Release -o artifacts/device-gateway --no-restore
-
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -80,26 +97,19 @@ jobs:
     defaults:
       run:
         working-directory: frontend
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Install
         run: npm ci
-
       - name: TypeCheck
         run: npx tsc --noEmit
-
       - name: Lint
         run: npx oxlint --allow-warnings
-
       - name: Test
         run: npm test
-
       - name: Build
         run: npm run build

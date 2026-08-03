@@ -9,53 +9,78 @@ on:
 jobs:
   mqtt-tests:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-
       - name: Build
         run: dotnet build
-
       - name: MQTT Component Tests
-        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests"
-
-  integration-tests:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests" --logger "trx;LogFileName=mqtt.trx"
+      - name: Upload MQTT Results
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          dotnet-version: 9.0.x
-
-      - name: Build
-        run: dotnet build
-
-      - name: Migration Verification
-        run: dotnet test --filter "FullyQualifiedName~MigrationVerification"
-        env:
-          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+          name: mqtt-test-results
+          path: '**/*.trx'
 
   e2e-tests:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-
       - name: Build
         run: dotnet build
-
       - name: End-to-End Tests
-        run: dotnet test --filter "Category=E2E"
+        run: dotnet test --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx"
+        env:
+          DOCKER_HOST: unix:///var/run/docker.sock
+      - name: Upload E2E Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: '**/*.trx'
+
+  recovery-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build
+        run: dotnet build
+      - name: Runtime Recovery Tests
+        run: dotnet test --filter "FullyQualifiedName~RuntimeRecoveryTests" --logger "trx;LogFileName=recovery.trx"
+      - name: Upload Recovery Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-test-results
+          path: '**/*.trx'
+
+  required-checks-complete:
+    runs-on: ubuntu-latest
+    needs: [mqtt-tests, e2e-tests, recovery-tests]
+    if: always()
+    steps:
+      - name: Check Build Status
+        run: |
+          echo "MQTT Tests: ${{ needs.mqtt-tests.result }}"
+          echo "E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "Recovery Tests: ${{ needs.recovery-tests.result }}"
+          if [ "${{ needs.mqtt-tests.result }}" = "success" ] && \
+             [ "${{ needs.e2e-tests.result }}" = "success" ] && \
+             [ "${{ needs.recovery-tests.result }}" = "success" ]; then
+            echo "All integration checks passed"
+          else
+            echo "Some integration checks failed - PR cannot be merged"
+            exit 1
+          fi

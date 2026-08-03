@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -13,8 +13,6 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Testcontainers" />
     <PackageReference Include="MQTTnet" />
-<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,7 +21,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClimateHub.Api\ClimateHub.Api.csproj" />
-    <ProjectReference Include="..\..\src\ClimateHub.DeviceGateway\ClimateHub.DeviceGateway.csproj" />
     <ProjectReference Include="..\..\src\ClimateHub.SharedKernel\ClimateHub.SharedKernel.csproj" />
   </ItemGroup>
 </Project>
