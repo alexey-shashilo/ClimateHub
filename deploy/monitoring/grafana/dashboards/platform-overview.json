@@ -1,0 +1,57 @@
+{
+  "title": "Platform Overview",
+  "uid": "platform-overview",
+  "version": 1,
+  "panels": [
+    {
+      "title": "API Requests Rate",
+      "type": "graph",
+      "targets": [{ "expr": "rate(http_requests_total[5m])", "legendFormat": "{{method}} {{route}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "API Error Rate",
+      "type": "graph",
+      "targets": [{ "expr": "rate(http_requests_total{status=~\"5..\"}[5m])", "legendFormat": "5xx" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "title": "Command Plan Count",
+      "type": "graph",
+      "targets": [{ "expr": "rate(climatehub_command_plans_total[5m])", "legendFormat": "plans" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "title": "Active SSE Connections",
+      "type": "stat",
+      "targets": [{ "expr": "climatehub_sse_connections_active" }],
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 }
+    },
+    {
+      "title": "DB Connections",
+      "type": "stat",
+      "targets": [{ "expr": "npgsql_connections_open" }],
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 }
+    },
+    {
+      "title": "Memory Usage",
+      "type": "graph",
+      "targets": [{ "expr": "process_resident_memory_bytes / 1024 / 1024", "legendFormat": "MB" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "title": "CPU Usage",
+      "type": "graph",
+      "targets": [{ "expr": "rate(process_cpu_seconds_total[1m])", "legendFormat": "cpu" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    },
+    {
+      "title": "Event Bus Lag",
+      "type": "graph",
+      "targets": [{ "expr": "climatehub_internal_events_lag", "legendFormat": "lag" }],
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 }
+    }
+  ],
+  "tags": ["climate-hub", "platform"],
+  "schemaVersion": 39
+}
