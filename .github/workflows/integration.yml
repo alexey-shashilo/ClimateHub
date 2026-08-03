@@ -1,0 +1,30 @@
+name: Integration and E2E
+
+on:
+  workflow_run:
+    workflows: [Build and Test]
+    types: [completed]
+    branches: [main, remediation/**]
+
+jobs:
+  integration:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build
+
+      - name: Migration Verification
+        run: dotnet test --filter "FullyQualifiedName~MigrationVerification"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+
+      - name: MQTT Component Tests
+        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests"
