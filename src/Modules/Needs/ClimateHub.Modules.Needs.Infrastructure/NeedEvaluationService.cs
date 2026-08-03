@@ -391,45 +391,15 @@ public class NeedEvaluationService
                 return;
             }
 
-            _logger.LogInformation("Need {NeedId} Climate Orchestrator had no plan, falling back to direct engineering request",
-                need.Id);
+            _logger.LogWarning("Need {NeedId} Climate Orchestrator had no matching plan for capability {CapabilityCode}. " +
+                "Need → Climate → Engineering chain failed. Blocking need.",
+                need.Id, engCapCode);
 
-            var engRequest = new EngineeringCapabilityRequestDto(
-                EngineeringCapabilityRequestId.New(),
-                need.Id.ToString(),
-                need.BuildingId,
-                need.RoomId,
-                engCapCode,
-                need.Severity.ToString(),
-                (int)need.Severity,
-                null,
-                need.CurrentValue,
-                need.DesiredMax,
-                DateTimeOffset.UtcNow,
-                null,
-                correlationId,
-                causationId,
-                $"need:{need.Id}:version:{need.Version}:engineering-plan:1");
-
-            var result = await _engineeringSystemsModule.PlanAsync(engRequest, ct);
-
-            if (result.Success && result.CommandPlanId.HasValue)
-            {
-                var commandPlanId = result.CommandPlanId.Value.Value.ToString("D");
-                need.MarkEngineeringPlanned(engCapCode, engCapCode, commandPlanId);
-                await _needRepo.UpdateAsync(need, ct);
-                await SaveEvaluationAsync(need, trigger, "Planning", "Planned",
-                    correlationId, causationId, ct);
-                await PublishNeedEventAsync("need.planned", need, correlationId, causationId, ct);
-            }
-            else
-            {
-                need.Block(result.FailureCode ?? "ENGINEERING_PLAN_FAILED");
-                await _needRepo.UpdateAsync(need, ct);
-                await SaveEvaluationAsync(need, trigger, "Planning", "Blocked",
-                    correlationId, causationId, ct, failureCode: result.FailureCode);
-                await PublishNeedEventAsync("need.blocked", need, correlationId, causationId, ct);
-            }
+            need.Block("CLIMATE_PLAN_MISSING_CAPABILITY");
+            await _needRepo.UpdateAsync(need, ct);
+            await SaveEvaluationAsync(need, trigger, "Planning", "Blocked",
+                correlationId, causationId, ct, failureCode: "CLIMATE_PLAN_MISSING_CAPABILITY");
+            await PublishNeedEventAsync("need.blocked", need, correlationId, causationId, ct);
         }
         catch (Exception ex)
         {

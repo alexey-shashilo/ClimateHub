@@ -1,14 +1,11 @@
-name: Build and Test
+name: Release
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main, remediation/**]
-  workflow_dispatch:
+    branches: [main]
 
 jobs:
-  build:
+  full-test-suite:
     runs-on: ubuntu-latest
 
     services:
@@ -62,21 +59,45 @@ jobs:
       - name: Format Check
         run: dotnet format --verify-no-changes --no-restore
 
-      - name: Publish API
-        run: dotnet publish src/ClimateHub.Api/ClimateHub.Api.csproj -c Release -o artifacts/api --no-restore
+  mqtt-tests:
+    runs-on: ubuntu-latest
+    needs: full-test-suite
 
-      - name: Publish DeviceGateway
-        run: dotnet publish src/ClimateHub.DeviceGateway/ClimateHub.DeviceGateway.csproj -c Release -o artifacts/device-gateway --no-restore
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          name: build-artifacts
-          path: artifacts/
-          retention-days: 7
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build
+
+      - name: MQTT Component Tests
+        run: dotnet test --filter "FullyQualifiedName~MqttComponentTests"
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: full-test-suite
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build
+        run: dotnet build
+
+      - name: End-to-End Tests
+        run: dotnet test --filter "Category=E2E"
 
   frontend:
     runs-on: ubuntu-latest
+    needs: full-test-suite
     defaults:
       run:
         working-directory: frontend
@@ -103,3 +124,42 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: [mqtt-tests, e2e-tests, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build Release
+        run: dotnet build -c Release --no-restore --warningsaserrors
+
+      - name: Publish API
+        run: dotnet publish src/ClimateHub.Api/ClimateHub.Api.csproj -c Release -o artifacts/api
+
+      - name: Publish DeviceGateway
+        run: dotnet publish src/ClimateHub.DeviceGateway/ClimateHub.DeviceGateway.csproj -c Release -o artifacts/device-gateway
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: artifacts/
+          retention-days: 30
+
+      - name: Build Docker API
+        run: |
+          docker build -t climate-hub/api:latest -f deploy/Dockerfile.api .
+
+      - name: Build Docker DeviceGateway
+        run: |
+          docker build -t climate-hub/device-gateway:latest -f deploy/Dockerfile.device-gateway .

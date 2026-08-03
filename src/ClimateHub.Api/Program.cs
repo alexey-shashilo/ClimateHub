@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Text;
 using ClimateHub.Api;
 using ClimateHub.Api.Middleware;
@@ -21,6 +22,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -113,40 +115,122 @@ try
         app.MapOpenApi();
     }
 
-    // Apply pending migrations on startup
-    using (var scope = app.Services.CreateScope())
-    {
-        var sp = scope.ServiceProvider;
-        try
-        {
-            await sp.GetRequiredService<BuildingDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<DevicesDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<EnvironmentDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<NeedsDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<EngineeringSystemsDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<ClimateDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<InternalEventsDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<ClimateHub.Modules.IAM.Infrastructure.IamDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<AuditLogDbContext>().Database.MigrateAsync();
-            Log.Information("Database migrations applied successfully");
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Database migration failed (may be acceptable in dev)");
-        }
+    var argsList = args.ToList();
 
-        try
+    if (argsList.Contains("--migrate-only"))
+    {
+        using (var scope = app.Services.CreateScope())
         {
-            await ClimateHub.Api.Seeding.SeedDevelopmentData.SeedAsync(
+            var sp = scope.ServiceProvider;
+            var dbContexts = new DbContext[]
+            {
                 sp.GetRequiredService<BuildingDbContext>(),
                 sp.GetRequiredService<DevicesDbContext>(),
-                sp.GetRequiredService<EnvironmentDbContext>());
-            Log.Information("Development seed data applied");
+                sp.GetRequiredService<EnvironmentDbContext>(),
+                sp.GetRequiredService<NeedsDbContext>(),
+                sp.GetRequiredService<EngineeringSystemsDbContext>(),
+                sp.GetRequiredService<ClimateDbContext>(),
+                sp.GetRequiredService<InternalEventsDbContext>(),
+                sp.GetRequiredService<ClimateHub.Modules.IAM.Infrastructure.IamDbContext>(),
+                sp.GetRequiredService<AuditLogDbContext>()
+            };
+
+            foreach (var ctx in dbContexts)
+            {
+                await ctx.Database.MigrateAsync();
+            }
+
+            Log.Information("Database migrations applied successfully");
         }
-        catch (Exception ex)
+
+        if (argsList.Contains("--seed") && app.Environment.IsDevelopment())
         {
-            Log.Warning(ex, "Seed data failed (may be acceptable)");
+            using (var scope = app.Services.CreateScope())
+            {
+                var sp = scope.ServiceProvider;
+                await ClimateHub.Api.Seeding.SeedDevelopmentData.SeedAsync(
+                    sp.GetRequiredService<BuildingDbContext>(),
+                    sp.GetRequiredService<DevicesDbContext>(),
+                    sp.GetRequiredService<EnvironmentDbContext>());
+                Log.Information("Development seed data applied");
+            }
         }
+
+        Log.Information("Migration complete, exiting");
+        return;
+    }
+
+    if (argsList.Contains("--validate-config"))
+    {
+        var errors = 0;
+        var jwtKey = builder.Configuration.GetSection("Jwt").GetValue<string>("SigningKey");
+        if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Contains("SET_VIA_ENVIRONMENT"))
+        {
+            Log.Error("Jwt:SigningKey is missing or contains placeholder value");
+            errors++;
+        }
+
+        var pgConn = builder.Configuration.GetRequiredSection("Postgres").GetValue<string>("ConnectionString");
+        if (!string.IsNullOrWhiteSpace(pgConn) && !pgConn.Contains("SET_VIA_ENVIRONMENT"))
+        {
+            try
+            {
+                using var pgConnObj = new NpgsqlConnection(pgConn);
+                await pgConnObj.OpenAsync();
+                pgConnObj.Close();
+                Log.Information("PostgreSQL connection verified");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "PostgreSQL connection failed");
+                errors++;
+            }
+        }
+
+        var mqttHost = builder.Configuration.GetSection("Mqtt").GetValue<string>("Host");
+        var mqttPort = builder.Configuration.GetSection("Mqtt").GetValue<int>("Port");
+        if (!string.IsNullOrWhiteSpace(mqttHost))
+        {
+            try
+            {
+                using var mqttClient = new TcpClient();
+                await mqttClient.ConnectAsync(mqttHost, mqttPort);
+                Log.Information("MQTT broker reachable at {Host}:{Port}", mqttHost, mqttPort);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "MQTT broker at {Host}:{Port} is not reachable", mqttHost, mqttPort);
+                errors++;
+            }
+        }
+
+        var influxUrl = builder.Configuration.GetSection("InfluxDb").GetValue<string>("Url");
+        if (!string.IsNullOrWhiteSpace(influxUrl) && !influxUrl.Contains("SET_VIA_ENVIRONMENT"))
+        {
+            try
+            {
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                var response = await httpClient.GetAsync(influxUrl.TrimEnd('/') + "/ping");
+                if (response.IsSuccessStatusCode)
+                    Log.Information("InfluxDB reachable at {Url}", influxUrl);
+                else
+                    Log.Warning("InfluxDB returned {Status} at {Url}", response.StatusCode, influxUrl);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "InfluxDB at {Url} is not reachable", influxUrl);
+                errors++;
+            }
+        }
+
+        if (errors > 0)
+        {
+            Log.Error("Configuration validation failed with {ErrorCount} error(s)", errors);
+            return;
+        }
+
+        Log.Information("Configuration validation passed");
+        return;
     }
 
     app.MapClimateHubEndpoints();
