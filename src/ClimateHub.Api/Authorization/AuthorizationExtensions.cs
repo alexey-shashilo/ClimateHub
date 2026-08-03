@@ -106,6 +106,21 @@ public static class AuthorizationExtensions
         });
     }
 
+    public static RouteHandlerBuilder RequireFloorAccess(this RouteHandlerBuilder builder)
+    {
+        return builder.AddEndpointFilter(async (context, next) =>
+        {
+            if (!TryGetRouteId(context, "floorId", out var floorId))
+                return Results.Problem(statusCode: 400, detail: "Invalid or missing floorId");
+
+            var buildingId = await ResolveBuildingForFloor(context, floorId);
+            if (buildingId is null)
+                return Results.Problem(statusCode: 404, detail: "Floor not found");
+
+            return await CheckBuildingAccessAndProceed(context, next, buildingId.Value);
+        });
+    }
+
     public static RouteHandlerBuilder RequireEngineeringSystemAccess(this RouteHandlerBuilder builder)
     {
         return builder.AddEndpointFilter(async (context, next) =>
@@ -159,6 +174,13 @@ public static class AuthorizationExtensions
         var cmdRepo = context.HttpContext.RequestServices.GetRequiredService<ClimateHub.Modules.Commands.Domain.Repositories.ICommandRepository>();
         var cmd = await cmdRepo.GetByIdAsync(ClimateHub.Modules.Commands.Domain.CommandId.From(commandId));
         return cmd?.BuildingId.Value;
+    }
+
+    private static async Task<Guid?> ResolveBuildingForFloor(EndpointFilterInvocationContext context, Guid floorId)
+    {
+        var floorRepo = context.HttpContext.RequestServices.GetRequiredService<ClimateHub.Modules.Building.Domain.Repositories.IFloorRepository>();
+        var floor = await floorRepo.GetByIdAsync(new ClimateHub.SharedKernel.Primitives.FloorId(floorId));
+        return floor?.BuildingId.Value;
     }
 
     private static async Task<Guid?> ResolveBuildingForEngineeringSystem(EndpointFilterInvocationContext context, Guid id)

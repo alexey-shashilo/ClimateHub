@@ -10,14 +10,14 @@ public static class ClimateEndpoints
     {
         var g = app.MapGroup("/api/v1/climate").WithTags("Climate");
 
-        g.MapGet("/goals", async (IClimateModule climate, string? roomId, CancellationToken ct) =>
+        g.MapGet("/goals/{roomId}", async (string roomId, IClimateModule climate, CancellationToken ct) =>
         {
-            if (string.IsNullOrEmpty(roomId) || !Guid.TryParse(roomId, out var guid))
-                return Results.Problem(statusCode: 400, detail: "ROOM_ID_REQUIRED");
+            if (!Guid.TryParse(roomId, out var guid))
+                return Results.Problem(statusCode: 400, detail: "INVALID_ROOM_ID");
 
             var goal = await climate.GetGoalForRoomAsync(RoomId.From(guid), ct);
             return Results.Ok(goal);
-        }).RequirePermission("environment_read");
+        }).RequireRoomAccess().RequirePermission("environment_read");
 
         g.MapGet("/goals/building", async (IClimateModule climate, string? roomIds, CancellationToken ct) =>
         {

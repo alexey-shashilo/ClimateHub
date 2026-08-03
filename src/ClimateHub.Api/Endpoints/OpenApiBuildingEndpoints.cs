@@ -93,13 +93,13 @@ public static class OpenApiBuildingEndpoints
             var cmd = new CreateRoomCommand { FloorId = FloorId.From(guid), Name = body.Name, Purpose = body.Purpose };
             var result = await roomHandler.HandleAsync(cmd, ct);
             return Results.Created($"/api/v1/floors/{floorId}/rooms/{result.Id}", result);
-        }).RequirePermission("building_configure");
+        }).RequireFloorAccess().RequirePermission("building_configure");
 
         fg.MapGet("/{floorId}/rooms", (string floorId, BuildingOpenApiService service, CancellationToken ct) =>
         {
             if (!Guid.TryParse(floorId, out var guid)) return Results.Problem(statusCode: 400, detail: "FLOOR_NOT_FOUND");
             return Results.Ok(Array.Empty<object>());
-        }).RequirePermission("building_read");
+        }).RequireFloorAccess().RequirePermission("building_read");
 
         fg.MapPut("/{floorId}", async (string floorId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -109,7 +109,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<UpdateFloorHandler>();
             await handler.HandleAsync(new UpdateFloorCommand { Id = FloorId.From(guid), Name = body.Name, Level = body.Level }, ct);
             return Results.NoContent();
-        }).RequirePermission("building_configure");
+        }).RequireFloorAccess().RequirePermission("building_configure");
 
         fg.MapDelete("/{floorId}", async (string floorId, string? buildingId, HttpContext ctx, CancellationToken ct) =>
         {
@@ -118,7 +118,7 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<DeleteFloorHandler>();
             await handler.HandleAsync(new DeleteFloorCommand { BuildingId = BuildingId.From(bgid), FloorId = FloorId.From(fgid) }, ct);
             return Results.NoContent();
-        }).RequirePermission("building_configure");
+        }).RequireBuildingAccess().RequirePermission("building_configure");
     }
 
     public static void MapOpenApiRoomEndpoints(this WebApplication app)
