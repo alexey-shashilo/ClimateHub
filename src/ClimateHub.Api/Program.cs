@@ -16,6 +16,7 @@ using ClimateHub.Modules.EngineeringSystems.Infrastructure;
 using ClimateHub.Modules.IAM;
 using ClimateHub.Modules.IAM.Domain;
 using ClimateHub.Api.Authorization;
+using ClimateHub.Infrastructure.Audit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,7 @@ try
     builder.Services.AddClimateModule(postgresConnectionString);
     builder.Services.AddEngineeringSystemsModule(postgresConnectionString);
     builder.Services.AddIamModule(postgresConnectionString);
+    builder.Services.AddAuditInfrastructure(postgresConnectionString);
 
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
@@ -99,6 +101,7 @@ try
     app.UseAuthentication();
     app.UseSerilogRequestLogging();
     app.UseAuthorization();
+    app.UseMiddleware<AuditMiddleware>();
     app.UseClimateHubProblemDetails();
 
     if (app.Environment.IsDevelopment())
@@ -120,6 +123,7 @@ try
             await sp.GetRequiredService<ClimateDbContext>().Database.MigrateAsync();
             await sp.GetRequiredService<InternalEventsDbContext>().Database.MigrateAsync();
             await sp.GetRequiredService<ClimateHub.Modules.IAM.Infrastructure.IamDbContext>().Database.MigrateAsync();
+            await sp.GetRequiredService<AuditLogDbContext>().Database.MigrateAsync();
             Log.Information("Database migrations applied successfully");
         }
         catch (Exception ex)
