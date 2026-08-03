@@ -17,7 +17,7 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
     public EndToEndScenario(EndToEndFixture fixture)
     {
         _fixture = fixture;
-        _http = fixture.CreateClient();
+        _http = fixture.CreateAuthenticatedClient();
     }
 
     [Fact]
@@ -25,13 +25,13 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
     {
         var (buildingId, floorId, roomId, deviceId) = await SetupBuildingInfrastructure();
 
-        var policyId = await CreateCo2Policy(buildingId);
+        await ConfigureCo2Policy(roomId, "Automatic");
 
         await PublishHighCo2Telemetry(deviceId, buildingId);
 
         var need = await WaitForNeedCreated(roomId);
         Assert.NotNull(need);
-        Assert.Equal("Co2TooHigh", need.Value.GetProperty("type").GetString());
+        Assert.Equal("Co2Reduction", need.Value.GetProperty("type").GetString());
 
         await PublishNormalCo2Telemetry(deviceId, buildingId);
 
@@ -44,21 +44,19 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
     public async Task CommandWithoutImprovement_TimesOut_PlanFailed()
     {
         var (buildingId, floorId, roomId, deviceId) = await SetupBuildingInfrastructure();
-        var policyId = await CreateCo2Policy(buildingId);
+
+        await ConfigureCo2Policy(roomId, "Automatic");
 
         await PublishHighCo2Telemetry(deviceId, buildingId);
 
         var need = await WaitForNeedCreated(roomId);
         Assert.NotNull(need);
 
-        var commandPlan = await WaitForCommandPlan(need.Value);
-        Assert.NotNull(commandPlan);
-
         await PublishHighCo2Telemetry(deviceId, buildingId);
 
-        var failed = await WaitForPlanFailed(commandPlan.Value);
+        var failed = await WaitForNeedBlocked(roomId);
         Assert.NotNull(failed);
-        Assert.Equal("Failed", failed.Value.GetProperty("status").GetString());
+        Assert.Equal("Blocked", failed.Value.GetProperty("status").GetString());
     }
 
     private async Task<(string buildingId, string floorId, string roomId, string deviceId)> SetupBuildingInfrastructure()
@@ -93,29 +91,23 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
         return (buildingId, floorId, roomId, deviceId);
     }
 
-    private async Task<string> CreateCo2Policy(string buildingId)
+    private async Task ConfigureCo2Policy(string roomId, string controlMode)
     {
-        var createPolicy = await _http.PostAsJsonAsync($"/api/v1/buildings/{buildingId}/policies",
-            new
+        var setPolicy = await _http.PutAsJsonAsync($"/api/v1/rooms/{roomId}/policy", new
+        {
+            co2 = new
             {
-                name = "CO2 Threshold Policy",
-                type = "Co2Threshold",
-                rule = new { maxCo2Ppm = 1000, evaluationIntervalMinutes = 1 },
-                effect = new
-                {
-                    type = "VentilationIncrease",
-                    activationDelayMinutes = 1,
-                    durationMinutes = 30
-                }
-            });
-        createPolicy.EnsureSuccessStatusCode();
-        var policy = await createPolicy.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        return policy.GetProperty("id").GetString()!;
+                minimum = 0.0,
+                maximum = 1000.0,
+                preferred = 600.0,
+                controlMode
+            }
+        });
+        setPolicy.EnsureSuccessStatusCode();
     }
 
-    private async Task<string> PublishHighCo2Telemetry(string deviceId, string buildingId)
+    private async Task PublishHighCo2Telemetry(string deviceId, string buildingId)
     {
-        using var mqttClient = await ConnectMqttClient();
         var telemetry = JsonSerializer.Serialize(new
         {
             messageId = Guid.NewGuid().ToString(),
@@ -124,7 +116,7 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
             buildingId,
             deviceId,
             bootId = Guid.NewGuid().ToString(),
-            sequenceNumber = 1,
+            sequenceNumber = Random.Shared.Next(1, 100000),
             measuredAt = DateTimeOffset.UtcNow.ToString("O"),
             payload = new { co2Ppm = 1800 }
         });
@@ -135,14 +127,12 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
             .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
             .Build();
 
-        var result = await mqttClient.PublishAsync(message);
+        var result = await _fixture.AdminMqttClient.PublishAsync(message);
         Assert.True(result.IsSuccess);
-        return buildingId;
     }
 
     private async Task PublishNormalCo2Telemetry(string deviceId, string buildingId)
     {
-        using var mqttClient = await ConnectMqttClient();
         var telemetry = JsonSerializer.Serialize(new
         {
             messageId = Guid.NewGuid().ToString(),
@@ -151,7 +141,7 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
             buildingId,
             deviceId,
             bootId = Guid.NewGuid().ToString(),
-            sequenceNumber = 2,
+            sequenceNumber = Random.Shared.Next(1, 100000),
             measuredAt = DateTimeOffset.UtcNow.ToString("O"),
             payload = new { co2Ppm = 400 }
         });
@@ -162,7 +152,7 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
             .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
             .Build();
 
-        var result = await mqttClient.PublishAsync(message);
+        var result = await _fixture.AdminMqttClient.PublishAsync(message);
         Assert.True(result.IsSuccess);
     }
 
@@ -171,7 +161,7 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
         for (int i = 0; i < 20; i++)
         {
             await Task.Delay(1000);
-            var resp = await _http.GetAsync($"/api/v1/rooms/{roomId}/needs");
+            var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
             if (!resp.IsSuccessStatusCode) continue;
             var needs = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
             if (needs.ValueKind == JsonValueKind.Array && needs.GetArrayLength() > 0)
@@ -185,7 +175,7 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
         for (int i = 0; i < 20; i++)
         {
             await Task.Delay(1000);
-            var resp = await _http.GetAsync($"/api/v1/rooms/{roomId}/needs");
+            var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
             if (!resp.IsSuccessStatusCode) continue;
             var needs = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
             if (needs.ValueKind != JsonValueKind.Array || needs.GetArrayLength() == 0) continue;
@@ -196,48 +186,19 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
         return null;
     }
 
-    private async Task<JsonElement?> WaitForCommandPlan(JsonElement need)
+    private async Task<JsonElement?> WaitForNeedBlocked(string roomId)
     {
-        var needId = need.GetProperty("id").GetString()!;
-        for (int i = 0; i < 20; i++)
-        {
-            await Task.Delay(1000);
-            var resp = await _http.GetAsync($"/api/v1/needs/{needId}/plans");
-            if (!resp.IsSuccessStatusCode) continue;
-            var plans = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-            if (plans.ValueKind == JsonValueKind.Array && plans.GetArrayLength() > 0)
-                return plans[0];
-        }
-        return null;
-    }
-
-    private async Task<JsonElement?> WaitForPlanFailed(JsonElement plan)
-    {
-        var planId = plan.GetProperty("id").GetString()!;
         for (int i = 0; i < 30; i++)
         {
             await Task.Delay(1000);
-            var resp = await _http.GetAsync($"/api/v1/plans/{planId}");
+            var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
             if (!resp.IsSuccessStatusCode) continue;
-            var planDetail = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-            var status = planDetail.GetProperty("status").GetString();
-            if (status == "Failed")
-                return planDetail;
+            var needs = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+            if (needs.ValueKind != JsonValueKind.Array || needs.GetArrayLength() == 0) continue;
+            var status = needs[0].GetProperty("status").GetString();
+            if (status == "Blocked")
+                return needs[0];
         }
         return null;
-    }
-
-    private async Task<IMqttClient> ConnectMqttClient()
-    {
-        var mqttFactory = new MqttClientFactory();
-        var client = mqttFactory.CreateMqttClient();
-        var options = new MqttClientOptionsBuilder()
-            .WithTcpServer("localhost", _fixture.MqttPort)
-            .WithClientId($"e2e-test-{Guid.NewGuid():N}"[..20])
-            .WithCleanSession()
-            .Build();
-
-        await client.ConnectAsync(options);
-        return client;
     }
 }
