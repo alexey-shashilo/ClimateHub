@@ -1,4 +1,6 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useNavigate, useLoaderData } from 'react-router-dom';
+import { buildingApi } from '@shared/api/endpoints';
+import { useEffect } from 'react';
 import { AppLayout } from '@shared/components/AppLayout';
 import { BuildingOverviewPage } from '@pages/building-overview/BuildingOverviewPage';
 import { RoomDetailsPage } from '@pages/room-details/RoomDetailsPage';
@@ -20,7 +22,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <AppLayout />,
     children: [
-      { index: true, element: <Navigate to="/buildings/building-001" replace /> },
+      { index: true, element: <BuildingRedirect /> },
       { path: 'buildings/:buildingId', element: <BuildingOverviewPage /> },
       { path: 'rooms/:roomId', element: <RoomDetailsPage /> },
       { path: 'rooms/:roomId/history', element: <EnvironmentHistoryPage /> },
@@ -36,6 +38,7 @@ export const router = createBrowserRouter([
       { path: 'command-plans', element: <CommandPlansPage /> },
       { path: 'command-plans/:id', element: <CommandPlanDetailPage /> },
       { path: '*', element: <NotFoundPage /> },
+      { path: 'buildings', element: <BuildingListPage /> },
     ],
   },
 ]);

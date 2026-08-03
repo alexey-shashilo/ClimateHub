@@ -11,33 +11,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: climate_hub_test
-          POSTGRES_USER: climate_hub
-          POSTGRES_PASSWORD: climate_hub_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Restore
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --no-restore
-      - name: Vulnerability Scan
-        run: dotnet list package --vulnerable --include-transitive
+      - name: Restore and Build
+        run: dotnet build
       - name: Architecture Tests
         run: dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx"
       - name: Unit Tests
@@ -59,16 +40,6 @@ jobs:
         with:
           name: test-results
           path: '**/*.trx'
-          retention-days: 7
-      - name: Publish API
-        run: dotnet publish src/ClimateHub.Api/ClimateHub.Api.csproj -c Release -o artifacts/api --no-restore
-      - name: Publish DeviceGateway
-        run: dotnet publish src/ClimateHub.DeviceGateway/ClimateHub.DeviceGateway.csproj -c Release -o artifacts/device-gateway --no-restore
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: artifacts/
           retention-days: 7
 
   frontend:

@@ -15,11 +15,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Build
-        run: dotnet build
-      - name: MQTT Component Tests
+      - name: Build and Test
         run: dotnet test tests/ClimateHub.MqttComponentTests --logger "trx;LogFileName=mqtt.trx"
-      - name: Upload MQTT Results
+      - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -34,13 +32,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Build
-        run: dotnet build
-      - name: End-to-End Tests
+      - name: Build and Test
         run: dotnet test tests/ClimateHub.EndToEndTests --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx"
-        env:
-          DOCKER_HOST: unix:///var/run/docker.sock
-      - name: Upload E2E Results
+      - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -55,11 +49,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Build
-        run: dotnet build
-      - name: Runtime Recovery Tests
+      - name: Build and Test
         run: dotnet test tests/ClimateHub.RuntimeRecoveryTests --logger "trx;LogFileName=recovery.trx"
-      - name: Upload Recovery Results
+      - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -74,13 +66,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Build
-        run: dotnet build
-      - name: Backup/Restore Tests
+      - name: Build and Test (Backup/Restore)
         run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~BackupRestoreTests" --logger "trx;LogFileName=backup.trx"
-      - name: Deploy Full Stack Tests
+      - name: Build and Test (Full Stack)
         run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~DeploymentVerificationTests&!Category=Deployment" --logger "trx;LogFileName=deploy-full.trx"
-      - name: Upload Deploy Results
+      - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
