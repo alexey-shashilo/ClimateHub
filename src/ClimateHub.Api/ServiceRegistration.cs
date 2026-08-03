@@ -55,6 +55,7 @@ public static class EndpointMapper
         app.MapNeedsEndpoints();
         app.MapEngineeringSystemsEndpoints();
         app.MapClimateEndpoints();
+        app.MapAuthEndpoints();
         return app;
     }
 }

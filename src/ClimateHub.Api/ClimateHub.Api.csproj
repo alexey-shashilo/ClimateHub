@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="System.Threading.RateLimiting" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -23,5 +24,9 @@
     <ProjectReference Include="..\Modules\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Domain\ClimateHub.Modules.EngineeringSystems.Domain.csproj" />
     <ProjectReference Include="..\Modules\Climate\ClimateHub.Modules.Climate.Infrastructure\ClimateHub.Modules.Climate.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Climate\ClimateHub.Modules.Climate.Application\ClimateHub.Modules.Climate.Application.csproj" />
+    <ProjectReference Include="..\Modules\IAM\ClimateHub.Modules.IAM.Domain\ClimateHub.Modules.IAM.Domain.csproj" />
+    <ProjectReference Include="..\Modules\IAM\ClimateHub.Modules.IAM.Application\ClimateHub.Modules.IAM.Application.csproj" />
+    <ProjectReference Include="..\Modules\IAM\ClimateHub.Modules.IAM.Infrastructure\ClimateHub.Modules.IAM.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\IAM\ClimateHub.Modules.IAM.Contracts\ClimateHub.Modules.IAM.Contracts.csproj" />
   </ItemGroup>
 </Project>

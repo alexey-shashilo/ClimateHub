@@ -1,0 +1,48 @@
+{
+  "title": "Active Climate Plans",
+  "uid": "climate-plans",
+  "version": 1,
+  "panels": [
+    {
+      "title": "Active Plans by Status",
+      "type": "piechart",
+      "targets": [{ "expr": "count by (status) (climatehub_command_plans{status!=\"Succeeded\",status!=\"Failed\"})", "legendFormat": "{{status}}" }],
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Plans Created Rate",
+      "type": "graph",
+      "targets": [{ "expr": "rate(climatehub_command_plans_total[5m])", "legendFormat": "total" }],
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }
+    },
+    {
+      "title": "Plan Duration (p50 / p95)",
+      "type": "graph",
+      "targets": [
+        { "expr": "histogram_quantile(0.5, rate(climatehub_plan_duration_seconds_bucket[5m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(climatehub_plan_duration_seconds_bucket[5m]))", "legendFormat": "p95" }
+      ],
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }
+    },
+    {
+      "title": "Plans by Capability Family",
+      "type": "piechart",
+      "targets": [{ "expr": "count by (capability_family) (climatehub_command_plans{status!=\"Succeeded\",status!=\"Failed\"})", "legendFormat": "{{capability_family}}" }],
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }
+    },
+    {
+      "title": "Execution Failures by Reason",
+      "type": "graph",
+      "targets": [{ "expr": "rate(climatehub_plan_failures_total[5m])", "legendFormat": "{{failure_reason}}" }],
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }
+    },
+    {
+      "title": "Resource Utilization %",
+      "type": "gauge",
+      "targets": [{ "expr": "avg(climatehub_resource_utilization_pct) by (resource)" }],
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 }
+    }
+  ],
+  "tags": ["climate-hub", "plans"],
+  "schemaVersion": 39
+}

@@ -166,7 +166,9 @@ public class EngineeringSystem : Entity<EngineeringSystemId>, IAggregateRoot
     public VentilationSystemConfiguration? VentilationConfiguration { get; private set; }
     public ThermalSystemConfiguration? ThermalConfiguration { get; private set; }
     public HumidificationSystemConfiguration? HumidificationConfiguration { get; private set; }
-    public LightingSystemConfiguration? LightingConfiguration { get; private set; }
+    // [PROTOTYPE] Lighting is a prototype feature — not yet ready for production.
+// Excluded from production claims, audits, and compliance checks.
+public LightingSystemConfiguration? LightingConfiguration { get; private set; }
 
     public void SetHumidificationConfiguration(HumidificationSystemConfiguration config)
     {

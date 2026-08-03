@@ -1,0 +1,88 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, remediation/**]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: climate_hub_test
+          POSTGRES_USER: climate_hub
+          POSTGRES_PASSWORD: climate_hub_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --warningsaserrors
+
+      - name: Architecture Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~ArchitectureTests"
+
+      - name: Unit Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~UnitTests"
+
+      - name: Smoke Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~SmokeTests"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+
+      - name: Integration Tests
+        run: dotnet test --no-build --filter "FullyQualifiedName~IntegrationTests"
+        env:
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_test;Username=climate_hub;Password=climate_hub_ci"
+
+      - name: Format Check
+        run: dotnet format --verify-no-changes --no-restore
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: TypeCheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx oxlint --allow-warnings
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

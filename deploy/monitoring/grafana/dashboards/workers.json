@@ -1,0 +1,45 @@
+{
+  "title": "Workers / Outbox",
+  "uid": "workers",
+  "version": 1,
+  "panels": [
+    {
+      "title": "Outbox Messages Pending",
+      "type": "stat",
+      "targets": [{ "expr": "climatehub_outbox_pending" }],
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Outbox Messages Published Rate",
+      "type": "graph",
+      "targets": [{ "expr": "rate(climatehub_outbox_published_total[5m])", "legendFormat": "published" }],
+      "gridPos": { "h": 6, "w": 12, "x": 6, "y": 0 }
+    },
+    {
+      "title": "Outbox Errors",
+      "type": "graph",
+      "targets": [{ "expr": "rate(climatehub_outbox_errors_total[5m])", "legendFormat": "errors" }],
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 }
+    },
+    {
+      "title": "Worker Pool Size",
+      "type": "stat",
+      "targets": [{ "expr": "climatehub_worker_pool_size" }],
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 }
+    },
+    {
+      "title": "Worker Queue Depth",
+      "type": "graph",
+      "targets": [{ "expr": "climatehub_worker_queue_depth", "legendFormat": "queue" }],
+      "gridPos": { "h": 6, "w": 12, "x": 6, "y": 6 }
+    },
+    {
+      "title": "Worker Processing Duration (p50)",
+      "type": "graph",
+      "targets": [{ "expr": "histogram_quantile(0.5, rate(climatehub_worker_duration_seconds_bucket[5m]))", "legendFormat": "p50" }],
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 }
+    }
+  ],
+  "tags": ["climate-hub", "workers"],
+  "schemaVersion": 39
+}

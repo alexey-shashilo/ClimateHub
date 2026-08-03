@@ -1,6 +1,8 @@
 using ClimateHub.Infrastructure.Observability;
 using ClimateHub.Modules.Commands.Contracts;
 using ClimateHub.Modules.EngineeringSystems.Application;
+using ClimateHub.Modules.EngineeringSystems.Application.Resolvers;
+using ClimateHub.Modules.EngineeringSystems.Application.Services;
 using ClimateHub.Modules.EngineeringSystems.Application.Thermal;
 using ClimateHub.Modules.EngineeringSystems.Contracts;
 using ClimateHub.Modules.EngineeringSystems.Domain.Repositories;
@@ -30,7 +32,17 @@ public static class DependencyInjection
         services.AddScoped<ResourceManager>();
         services.AddScoped<EngineeringDeviceSelector>();
         services.AddScoped<CommandPlanExecutor>();
-        
+
+        // Capability family resolver
+        services.AddSingleton<IEngineeringCapabilityFamilyResolver, EngineeringCapabilityFamilyResolver>();
+
+        // Specialized planning services
+        services.AddScoped<IVentilationPlanningService, VentilationPlanningService>();
+        services.AddScoped<IThermalPlanningService, ThermalPlanningService>();
+        services.AddScoped<IHumidificationPlanningService, HumidificationPlanningService>();
+        services.AddScoped<ILightingPlanningService, LightingPlanningService>();
+        services.AddScoped<IStandardEngineeringPlanningService, StandardEngineeringPlanningService>();
+
         services.AddScoped<IEngineeringSystemsModule, EngineeringSystemsModuleService>();
 
         services.AddScoped<VentilationDemandFactory>();
@@ -53,6 +65,10 @@ public static class DependencyInjection
         services.AddScoped<IDomesticHotWaterSystemRepository, DomesticHotWaterSystemRepository>();
         services.AddScoped<IWeatherCompensationCurveRepository, WeatherCompensationCurveRepository>();
         services.AddScoped<IThermalDemandRepository, ThermalDemandRepository>();
+
+        services.AddScoped<IHumidificationConfigurationRepository, HumidificationConfigurationRepository>();
+        services.AddScoped<IHumidificationZoneRepository, HumidificationZoneRepository>();
+        services.AddScoped<IHumidificationDemandRepository, HumidificationDemandRepository>();
 
         services.AddScoped<WeatherCompensationPlanner>();
         services.AddScoped<HeatLossEstimator>();

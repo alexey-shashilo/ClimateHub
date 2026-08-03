@@ -1,5 +1,4 @@
-using System.Text.Json.Serialization;
-using ClimateHub.Modules.Environment.Domain;
+using ClimateHub.Api.Authorization;
 using ClimateHub.Modules.Environment.Infrastructure.Repositories;
 using ClimateHub.SharedKernel.Primitives;
 
@@ -28,7 +27,7 @@ public static class OpenApiPolicyEndpoints
                 co2 = new { minimum = policy.Co2Min, maximum = policy.Co2Max, preferred = policy.Co2Preferred, controlMode = policy.Co2Mode.ToString() },
                 illuminance = new { minimum = policy.IlluminanceMin, maximum = policy.IlluminanceMax, preferred = policy.IlluminancePreferred, controlMode = policy.IlluminanceMode.ToString() }
             });
-        }).WithTags("Policy");
+        }).WithTags("Policy").RequireRoomAccess().RequirePermission("policy_read");
 
         app.MapPut("/api/v1/rooms/{roomId}/policy", async (string roomId, HttpContext ctx, IRoomPolicyRepository repo, CancellationToken ct) =>
         {
@@ -39,7 +38,7 @@ public static class OpenApiPolicyEndpoints
             var existing = await repo.GetByRoomAsync(rid, ct);
             if (existing is null)
             {
-                existing = RoomPolicy.Create(rid,
+                existing = ClimateHub.Modules.Environment.Domain.RoomPolicy.Create(rid,
                     body.Temperature?.Minimum, body.Temperature?.Maximum, body.Temperature?.Preferred, body.Temperature?.ControlMode,
                     body.Humidity?.Minimum, body.Humidity?.Maximum, body.Humidity?.Preferred, body.Humidity?.ControlMode,
                     body.Co2?.Minimum, body.Co2?.Maximum, body.Co2?.Preferred, body.Co2?.ControlMode,
@@ -55,7 +54,7 @@ public static class OpenApiPolicyEndpoints
             }
             await repo.UpsertAsync(existing, ct);
             return Results.NoContent();
-        }).WithTags("Policy");
+        }).WithTags("Policy").RequireRoomAccess().RequirePermission("policy_configure");
     }
 }
 
@@ -64,6 +63,6 @@ public class PolicyBoundDto
     public double? Minimum { get; set; }
     public double? Maximum { get; set; }
     public double? Preferred { get; set; }
-    [JsonPropertyName("controlMode")] public PolicyControlMode? ControlMode { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("controlMode")] public ClimateHub.Modules.Environment.Domain.PolicyControlMode? ControlMode { get; set; }
 }
 public class PolicyUpdateRequest { public PolicyBoundDto? Temperature { get; set; } public PolicyBoundDto? Humidity { get; set; } public PolicyBoundDto? Co2 { get; set; } public PolicyBoundDto? Illuminance { get; set; } }

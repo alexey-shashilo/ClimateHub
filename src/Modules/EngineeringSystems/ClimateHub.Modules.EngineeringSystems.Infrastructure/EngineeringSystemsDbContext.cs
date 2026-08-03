@@ -1,4 +1,5 @@
 using ClimateHub.Modules.EngineeringSystems.Domain;
+using ClimateHub.Modules.EngineeringSystems.Domain.Humidification;
 using ClimateHub.Modules.EngineeringSystems.Domain.Repositories;
 using ClimateHub.Modules.EngineeringSystems.Domain.Thermal;
 using ClimateHub.SharedKernel.Primitives;
@@ -26,6 +27,10 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
     public DbSet<BufferTank> BufferTanks => Set<BufferTank>();
     public DbSet<DomesticHotWaterSystem> DomesticHotWaterSystems => Set<DomesticHotWaterSystem>();
     public DbSet<WeatherCompensationCurve> WeatherCompensationCurves => Set<WeatherCompensationCurve>();
+    public DbSet<HumidificationSystemConfiguration> HumidificationConfigurations => Set<HumidificationSystemConfiguration>();
+    public DbSet<HumidificationZone> HumidificationZones => Set<HumidificationZone>();
+    public DbSet<HumidificationZoneRoom> HumidificationZoneRooms => Set<HumidificationZoneRoom>();
+    public DbSet<HumidificationDemand> HumidificationDemands => Set<HumidificationDemand>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -55,8 +60,25 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Ignore(x => x.Zones);
             e.Ignore(x => x.HeatSources);
             e.Ignore(x => x.HydraulicCircuits);
-            e.Ignore(x => x.VentilationConfiguration);
-            e.Ignore(x => x.ThermalConfiguration);
+            e.OwnsOne(x => x.VentilationConfiguration, v =>
+            {
+                v.ToTable("ventilation_configurations");
+                v.WithOwner().HasForeignKey("EngineeringSystemId");
+                v.Property(x => x.Id).ValueGeneratedNever();
+                v.Property(x => x.SystemMode).HasConversion<string>().HasMaxLength(20);
+                v.Property(x => x.Version).IsConcurrencyToken();
+                v.HasIndex("EngineeringSystemId").IsUnique();
+            });
+            e.OwnsOne(x => x.ThermalConfiguration, t =>
+            {
+                t.ToTable("thermal_configurations");
+                t.WithOwner().HasForeignKey("EngineeringSystemId");
+                t.Property(x => x.Id).ValueGeneratedNever();
+                t.Property(x => x.Version).IsConcurrencyToken();
+                t.HasIndex("EngineeringSystemId").IsUnique();
+            });
+            e.Ignore(x => x.HumidificationConfiguration);
+            e.Ignore(x => x.LightingConfiguration);
             e.Ignore(x => x.DomainEvents);
 
             e.HasMany<SystemCapability>().WithOne().HasForeignKey("EngineeringSystemId");
@@ -344,6 +366,51 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.EngineeringSystemId);
         });
+
+        // ============ Humidification Domain EF Configurations ============
+
+        mb.Entity<HumidificationSystemConfiguration>(e =>
+        {
+            e.ToTable("humidification_configurations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EngineeringSystemId);
+            e.Property(x => x.Mode).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.EngineeringSystemId).IsUnique();
+        });
+
+        mb.Entity<HumidificationZone>(e =>
+        {
+            e.ToTable("humidification_zones");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EngineeringSystemId);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.Ignore(x => x.Rooms);
+            e.HasMany<HumidificationZoneRoom>().WithOne().HasForeignKey("ZoneId");
+            e.HasIndex(x => x.EngineeringSystemId);
+        });
+
+        mb.Entity<HumidificationZoneRoom>(e =>
+        {
+            e.ToTable("humidification_zone_rooms");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.RoomId).HasConversion(v => v.Value, v => RoomId.From(v));
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.RoomId);
+        });
+
+        mb.Entity<HumidificationDemand>(e =>
+        {
+            e.ToTable("humidification_demands");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ClimatePlanId).HasMaxLength(50);
+            e.Property(x => x.RoomId).HasConversion(v => v.Value, v => RoomId.From(v));
+            e.Property(x => x.Severity).HasMaxLength(20);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.HasIndex(x => x.EngineeringSystemId);
+            e.HasIndex(x => new { x.RoomId, x.Status });
+        });
     }
 }
 
@@ -351,7 +418,10 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
 {
     public async Task<EngineeringSystem?> GetByIdAsync(EngineeringSystemId id, CancellationToken ct = default)
     {
-        var system = await ctx.EngineeringSystems.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var system = await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (system is null) return null;
         await ctx.Entry(system).Collection(s => ctx.Set<SystemCapability>().Where(c => c.EngineeringSystemId == system.Id.Value).ToList()).LoadAsync(ct);
         await ctx.Entry(system).Collection(s => ctx.Set<EngineeringResource>().Where(r => r.EngineeringSystemId == system.Id.Value).ToList()).LoadAsync(ct);
@@ -359,24 +429,40 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
     }
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetByBuildingAsync(BuildingId buildingId, CancellationToken ct = default)
-        => await ctx.EngineeringSystems.Where(x => x.BuildingId == buildingId).ToListAsync(ct);
+        => await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
+            .Where(x => x.BuildingId == buildingId).ToListAsync(ct);
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetByRoomAsync(RoomId roomId, CancellationToken ct = default)
-        => await ctx.EngineeringSystems.ToListAsync(ct);
+        => await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
+            .ToListAsync(ct);
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetByCapabilityAsync(string capabilityCode, CancellationToken ct = default)
         => await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
             .Where(x => ctx.Set<SystemCapability>().Any(c => c.EngineeringSystemId == x.Id.Value && c.Code == capabilityCode))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetAllAsync(CancellationToken ct = default)
-        => await ctx.EngineeringSystems.ToListAsync(ct);
+        => await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
+            .ToListAsync(ct);
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetByLifecycleStatusAsync(LifecycleStatus status, CancellationToken ct = default)
-        => await ctx.EngineeringSystems.Where(x => x.Lifecycle == status).ToListAsync(ct);
+        => await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
+            .Where(x => x.Lifecycle == status).ToListAsync(ct);
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetByZoneAsync(Guid zoneId, CancellationToken ct = default)
         => await ctx.EngineeringSystems
+            .Include(x => x.VentilationConfiguration)
+            .Include(x => x.ThermalConfiguration)
             .Where(x => ctx.Set<SystemZone>().Any(z => z.Id == zoneId && z.PreferredEngineeringSystemId != null && z.PreferredEngineeringSystemId.Value.Value == x.Id.Value))
             .ToListAsync(ct);
 

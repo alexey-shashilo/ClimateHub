@@ -1,3 +1,4 @@
+using ClimateHub.Api.Authorization;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace ClimateHub.Api.Endpoints;

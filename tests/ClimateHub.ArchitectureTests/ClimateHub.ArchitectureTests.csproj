@@ -12,6 +12,8 @@
     <ProjectReference Include="..\..\src\ClimateHub.DeviceGateway\ClimateHub.DeviceGateway.csproj" />
     <ProjectReference Include="..\..\src\ClimateHub.Infrastructure\ClimateHub.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ClimateHub.SharedKernel\ClimateHub.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\Modules\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Application\ClimateHub.Modules.EngineeringSystems.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Domain\ClimateHub.Modules.EngineeringSystems.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Needs\ClimateHub.Modules.Needs.Infrastructure\ClimateHub.Modules.Needs.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Commands\ClimateHub.Modules.Commands.Application\ClimateHub.Modules.Commands.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Commands\ClimateHub.Modules.Commands.Infrastructure\ClimateHub.Modules.Commands.Infrastructure.csproj" />

@@ -1,3 +1,4 @@
+using ClimateHub.Infrastructure.Audit;
 using ClimateHub.Infrastructure.Events;
 using ClimateHub.Infrastructure.InternalEvents;
 using ClimateHub.Infrastructure.Observability;
@@ -19,7 +20,8 @@ public static class ServiceCollectionExtensions
             .AddClimateHubHealthChecks()
             .AddSingleton<EnvironmentEventBus>()
             .AddScoped<IDomainEventDispatcher, DomainEventDispatcher>()
-            .AddScoped<DomainEventInterceptor>();
+            .AddScoped<DomainEventInterceptor>()
+            .AddSingleton<AppendOnlySaveChangesInterceptor>();
 
         return services;
     }
@@ -43,6 +45,20 @@ public static class ServiceCollectionExtensions
             .ValidateDataAnnotations();
 
         services.AddHostedService<InternalEventOutboxWorker>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddAuditInfrastructure(this IServiceCollection services, string connectionString)
+    {
+        services.AddDbContext<AuditLogDbContext>((sp, options) =>
+            options.UseNpgsql(connectionString, npgsql =>
+                npgsql.MigrationsHistoryTable("__ef_migrations_history", "audit")
+                      .MigrationsAssembly(typeof(AuditLogDbContext).Assembly.FullName!))
+            .AddInterceptors(sp.GetRequiredService<AppendOnlySaveChangesInterceptor>()));
+
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<AuditService>();
 
         return services;
     }

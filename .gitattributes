@@ -1,0 +1,31 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# C# project files
+*.cs diff=csharp
+*.csproj text=merge=union
+
+# Scripts
+*.sh text eol=lf
+*.ps1 text eol=crlf
+
+# Docker
+Dockerfile* text
+
+# YAML
+*.yml text
+*.yaml text
+
+# Markdown
+*.md text
+
+# Lock files
+package-lock.json -text
+
+# Binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg text
+*.woff binary
+*.woff2 binary

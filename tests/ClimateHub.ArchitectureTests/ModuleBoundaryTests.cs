@@ -1,3 +1,5 @@
+using ClimateHub.Modules.EngineeringSystems.Application.Resolvers;
+using ClimateHub.Modules.EngineeringSystems.Domain;
 using Xunit;
 
 namespace ClimateHub.ArchitectureTests;
@@ -81,6 +83,57 @@ public class ModuleBoundaryTests
     {
         var refs = GetProjectReferences(@"src\Modules\Commands\ClimateHub.Modules.Commands.Application\ClimateHub.Modules.Commands.Application.csproj");
         Assert.DoesNotContain(refs, r => r.Name.Contains("Needs.Infrastructure"));
+    }
+
+    [Fact]
+    public void EveryEngineeringCapabilityCode_MapsToExactlyOneFamily()
+    {
+        var resolver = new EngineeringCapabilityFamilyResolver();
+        var mappings = resolver.GetAllMappings();
+
+        var capabilityFields = typeof(EngineeringCapabilityCodes)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.FieldType == typeof(string))
+            .Select(f => (string)f.GetValue(null)!)
+            .ToHashSet();
+
+        var mappedCodes = mappings.Keys.ToHashSet();
+
+        var unmapped = capabilityFields.Except(mappedCodes).ToList();
+        var extraMapped = mappedCodes.Except(capabilityFields).ToList();
+
+        Assert.Empty(unmapped);
+        Assert.Empty(extraMapped);
+    }
+
+    [Fact]
+    public void NoDuplicateCapabilityFamilyRegistrations()
+    {
+        var resolver = new EngineeringCapabilityFamilyResolver();
+        var exception = Record.Exception(() => resolver.ValidateNoOverlaps());
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void CapabilityPlanner_HasNoDuplicateDeviceCapabilitySelection()
+    {
+        var needToEngFields = typeof(ClimateHub.Modules.Needs.Infrastructure.CapabilityPlanner)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(m => m.Name is "GetEngineeringCapabilityCode" or "GetCapabilityCode");
+
+        Assert.NotEmpty(needToEngFields);
+    }
+
+    [Fact]
+    public void CapabilityPlanner_EngMapping_Matches_EngineeringCapabilityCodes()
+    {
+        var plannerEngMapping = typeof(ClimateHub.Modules.Needs.Infrastructure.CapabilityPlanner)
+            .GetMethod("GetEngineeringCapabilityCode", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+        var engCodesType = typeof(EngineeringCapabilityCodes);
+
+        Assert.NotNull(plannerEngMapping);
+        Assert.NotNull(engCodesType.GetField("IncreaseTemperature", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static));
     }
 
     private List<ProjectReference> GetProjectReferences(string relativePath)

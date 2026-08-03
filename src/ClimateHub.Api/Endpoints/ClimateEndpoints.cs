@@ -1,3 +1,4 @@
+using ClimateHub.Api.Authorization;
 using ClimateHub.Modules.Climate.Contracts;
 using ClimateHub.SharedKernel.Primitives;
 
@@ -16,7 +17,7 @@ public static class ClimateEndpoints
 
             var goal = await climate.GetGoalForRoomAsync(RoomId.From(guid), ct);
             return Results.Ok(goal);
-        });
+        }).RequirePermission("environment_read");
 
         g.MapGet("/goals/building", async (IClimateModule climate, string? roomIds, CancellationToken ct) =>
         {
@@ -42,7 +43,7 @@ public static class ClimateEndpoints
                 });
             }
             return Results.Ok(results);
-        });
+        }).RequirePermission("environment_read");
 
         g.MapPost("/plan", async (IClimateModule climate, ClimatePlanRequest req, CancellationToken ct) =>
         {
@@ -73,25 +74,25 @@ public static class ClimateEndpoints
                     ExecutionOrder = sp.ExecutionOrder
                 })
             });
-        });
+        }).RequirePermission("need_execute");
 
         g.MapGet("/strategies", (IClimateModule climate) =>
         {
             var profiles = climate.GetStrategyProfiles();
             return Results.Ok(profiles);
-        });
+        }).RequirePermission("environment_read");
 
         g.MapPost("/check-conflicts", (IClimateModule climate, ConflictCheckRequest req) =>
         {
             var hasConflicts = climate.ConflictsExist(req.Capabilities ?? new List<string>());
             return Results.Ok(new { HasConflicts = hasConflicts });
-        });
+        }).RequirePermission("environment_read");
 
         g.MapPost("/priority", (IClimateModule climate, PriorityRequest req) =>
         {
             var higher = climate.IsHigherPriority(req.CapabilityA ?? "", req.CapabilityB ?? "", req.Profile ?? "Balanced");
             return Results.Ok(new { HigherPriority = higher ? req.CapabilityA : req.CapabilityB });
-        });
+        }).RequirePermission("environment_read");
     }
 }
 

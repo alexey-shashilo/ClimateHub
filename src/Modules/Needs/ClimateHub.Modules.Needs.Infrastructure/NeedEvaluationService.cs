@@ -113,7 +113,11 @@ public class NeedEvaluationService
         var evalState = await _evalStateRepo.GetByRoomAndParameterAsync(roomId, parameter, ct);
         if (evalState is not null)
         {
-            evalState.ClearViolation(now);
+            var targetMax = MapParameterToDefaultMax(parameter);
+            if (current <= targetMax - opts.ResolutionHysteresis)
+            {
+                evalState.ClearViolation(now);
+            }
             evalState.UpdateEvaluation(current, "Valid", now, now);
             await _evalStateRepo.UpdateAsync(evalState, ct);
         }
@@ -286,6 +290,18 @@ public class NeedEvaluationService
         CancellationToken ct)
     {
         if (mode == ControlMode.Disabled) return;
+
+        // Anti-oscillation: cooldown check — if a recent command was sent for this parameter, block new Need creation
+        var recentNeed = await _needRepo.GetActiveByTypeAsync(roomId, needType, ct);
+        if (recentNeed is not null)
+        {
+            if (recentNeed.CooldownUntil.HasValue && now < recentNeed.CooldownUntil.Value)
+            {
+                _logger.LogDebug("Need {NeedType} for room {RoomId} is in cooldown until {CooldownUntil}, suppressing new Need creation",
+                    needType, roomId, recentNeed.CooldownUntil.Value);
+                return;
+            }
+        }
 
         var need = Need.Create(
             BuildingId.From(Guid.Empty), roomId, needType, severity,
@@ -576,6 +592,15 @@ public class NeedEvaluationService
         "manual" => ControlMode.Manual,
         "disabled" => ControlMode.Disabled,
         _ => ControlMode.MonitorOnly
+    };
+
+    private static double MapParameterToDefaultMax(string parameter) => parameter switch
+    {
+        "temperature" => 26,
+        "humidity" => 60,
+        "co2" => 1000,
+        "illuminance" => 750,
+        _ => 1000
     };
 
     private static NeedType MapParameterToNeedType(string parameter) => parameter switch

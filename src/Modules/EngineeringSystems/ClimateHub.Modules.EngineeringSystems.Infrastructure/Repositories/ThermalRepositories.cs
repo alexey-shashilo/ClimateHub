@@ -1,4 +1,5 @@
 using ClimateHub.Modules.EngineeringSystems.Domain;
+using ClimateHub.Modules.EngineeringSystems.Domain.Humidification;
 using ClimateHub.Modules.EngineeringSystems.Domain.Repositories;
 using ClimateHub.Modules.EngineeringSystems.Domain.Thermal;
 using ClimateHub.SharedKernel.Primitives;
@@ -142,4 +143,34 @@ public class ThermalDemandRepository(EngineeringSystemsDbContext ctx) : IThermal
 
     public async Task AddAsync(ThermalDemand demand, CancellationToken ct = default) { await ctx.ThermalDemands.AddAsync(demand, ct); await ctx.SaveChangesAsync(ct); }
     public async Task UpdateAsync(ThermalDemand demand, CancellationToken ct = default) { ctx.ThermalDemands.Update(demand); await ctx.SaveChangesAsync(ct); }
+}
+
+public class HumidificationConfigurationRepository(EngineeringSystemsDbContext ctx) : IHumidificationConfigurationRepository
+{
+    public async Task<HumidificationSystemConfiguration?> GetByEngineeringSystemAsync(Guid engineeringSystemId, CancellationToken ct = default)
+        => await ctx.HumidificationConfigurations.FirstOrDefaultAsync(x => x.EngineeringSystemId == engineeringSystemId, ct);
+
+    public async Task AddAsync(HumidificationSystemConfiguration config, CancellationToken ct = default) { await ctx.HumidificationConfigurations.AddAsync(config, ct); await ctx.SaveChangesAsync(ct); }
+    public async Task UpdateAsync(HumidificationSystemConfiguration config, CancellationToken ct = default) { ctx.HumidificationConfigurations.Update(config); await ctx.SaveChangesAsync(ct); }
+}
+
+public class HumidificationZoneRepository(EngineeringSystemsDbContext ctx) : IHumidificationZoneRepository
+{
+    public async Task<IReadOnlyCollection<HumidificationZone>> GetByEngineeringSystemAsync(Guid engineeringSystemId, CancellationToken ct = default)
+        => await ctx.HumidificationZones.Where(x => x.EngineeringSystemId == engineeringSystemId).ToListAsync(ct);
+
+    public async Task AddAsync(HumidificationZone zone, CancellationToken ct = default) { await ctx.HumidificationZones.AddAsync(zone, ct); await ctx.SaveChangesAsync(ct); }
+    public async Task UpdateAsync(HumidificationZone zone, CancellationToken ct = default) { ctx.HumidificationZones.Update(zone); await ctx.SaveChangesAsync(ct); }
+}
+
+public class HumidificationDemandRepository(EngineeringSystemsDbContext ctx) : IHumidificationDemandRepository
+{
+    public async Task<IReadOnlyCollection<HumidificationDemand>> GetActiveByEngineeringSystemAsync(Guid engineeringSystemId, CancellationToken ct = default)
+        => await ctx.HumidificationDemands.Where(d => d.EngineeringSystemId == engineeringSystemId && d.Status == "Active").ToListAsync(ct);
+
+    public async Task<IReadOnlyCollection<HumidificationDemand>> GetActiveByRoomAsync(RoomId roomId, CancellationToken ct = default)
+        => await ctx.HumidificationDemands.Where(d => d.RoomId == roomId && d.Status == "Active").ToListAsync(ct);
+
+    public async Task AddAsync(HumidificationDemand demand, CancellationToken ct = default) { await ctx.HumidificationDemands.AddAsync(demand, ct); await ctx.SaveChangesAsync(ct); }
+    public async Task UpdateAsync(HumidificationDemand demand, CancellationToken ct = default) { ctx.HumidificationDemands.Update(demand); await ctx.SaveChangesAsync(ct); }
 }

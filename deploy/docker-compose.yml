@@ -85,6 +85,36 @@ services:
       - climate-hub-net
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: climate-hub-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: climate-hub-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - climate-hub-net
+    restart: unless-stopped
+
   redis:
     image: redis:7.4-alpine
     container_name: climate-hub-redis
@@ -170,6 +200,8 @@ volumes:
   mosquitto-log:
   influxdb-data:
   redis-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   climate-hub-net:
