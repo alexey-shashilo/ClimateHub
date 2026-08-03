@@ -7,6 +7,20 @@ namespace ClimateHub.Api.Middleware;
 
 public static class ProblemDetailsMiddleware
 {
+    private static readonly string[] SensitivePatterns =
+    [
+        "Authorization",
+        "refresh_token",
+        "password",
+        "MQTT_SECRET",
+        "mqtt__password",
+        "ConnectionString",
+        "INFLUXDB_TOKEN",
+        "InfluxDb__Token",
+        "SigningKey",
+        "PRIVATE_KEY",
+    ];
+
     public static IApplicationBuilder UseClimateHubProblemDetails(this WebApplication app)
     {
         app.UseExceptionHandler(exceptionHandlerApp =>
@@ -36,17 +50,42 @@ public static class ProblemDetailsMiddleware
                 context.Response.StatusCode = statusCode;
                 context.Response.ContentType = "application/problem+json";
 
+                var detail = exception?.Message ?? code;
+                detail = RedactSecrets(detail);
+
                 await context.Response.WriteAsJsonAsync(new ProblemDetails
                 {
                     Type = $"https://climate-hub.local/errors/{code}",
                     Title = code,
                     Status = statusCode,
-                    Detail = exception?.Message ?? code,
+                    Detail = detail,
                     Instance = context.Request.Path
                 });
             });
         });
 
         return app;
+    }
+
+    public static string RedactSecrets(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return message;
+
+        foreach (var pattern in SensitivePatterns)
+        {
+            var index = message.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+            if (index >= 0)
+            {
+                var colonIndex = message.IndexOf(':', index);
+                if (colonIndex > 0)
+                {
+                    var endOfValue = message.IndexOfAny(['\n', '\r', ' '], colonIndex);
+                    if (endOfValue < 0) endOfValue = message.Length;
+                    message = message[..(colonIndex + 1)] + " ***REDACTED***" + message[endOfValue..];
+                }
+            }
+        }
+
+        return message;
     }
 }

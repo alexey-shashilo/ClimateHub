@@ -92,6 +92,10 @@ try
 
     var app = builder.Build();
 
+    // Security middleware (order matters: rate limiting before everything)
+    app.UseMiddleware<SecurityHeadersMiddleware>();
+    app.UseMiddleware<RateLimitingMiddleware>();
+
     var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5173"];
     app.UseCors(policy => policy
         .WithOrigins(corsOrigins)
