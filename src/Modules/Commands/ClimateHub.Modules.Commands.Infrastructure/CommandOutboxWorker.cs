@@ -12,14 +12,15 @@ public class CommandOutboxWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CommandOutboxWorker> _logger;
+    private readonly Microsoft.Extensions.Options.IOptions<MqttOptions> _mqttOptions;
     private IMqttClient? _mqttClient;
-    private string _mqttHost = "localhost";
-    private int _mqttPort = 1883;
 
-    public CommandOutboxWorker(IServiceScopeFactory scopeFactory, ILogger<CommandOutboxWorker> logger)
+    public CommandOutboxWorker(IServiceScopeFactory scopeFactory, ILogger<CommandOutboxWorker> logger,
+        Microsoft.Extensions.Options.IOptions<MqttOptions> mqttOptions)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _mqttOptions = mqttOptions;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,8 +30,8 @@ public class CommandOutboxWorker : BackgroundService
         var factory = new MqttClientFactory();
         _mqttClient = factory.CreateMqttClient();
         var opts = new MqttClientOptionsBuilder()
-            .WithTcpServer(_mqttHost, _mqttPort)
-            .WithClientId("climate-hub-command-outbox")
+            .WithTcpServer(_mqttOptions.Value.Host, _mqttOptions.Value.Port)
+            .WithClientId(_mqttOptions.Value.ClientId ?? "climate-hub-command-outbox")
             .WithCleanSession().Build();
 
         await ConnectWithRetryAsync(opts, stoppingToken);
