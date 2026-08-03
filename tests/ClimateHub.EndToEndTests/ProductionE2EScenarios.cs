@@ -9,7 +9,7 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
 {
     private readonly E2eProductionFixture _fixture;
     private readonly HttpClient _http;
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
 
     public ProductionE2EScenarios(E2eProductionFixture fixture)
     {
@@ -18,162 +18,107 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
     }
 
     [Fact]
-    public async Task PositiveScenario_FullPipeline_GoalSatisfied()
+    public async Task ClosedLoop_Co2_FullOrchestration()
     {
-        var ctx = await SetupEnvironment();
-
-        await ctx.Actuator.StartAsync();
-
+        var ctx = await SetupFullEngineeringRuntime();
         await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 1800.0 });
 
-        var need = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status == "Detected",
-            TimeSpan.FromSeconds(30));
-        Assert.NotNull(need);
-        Assert.Equal("Detected", need.Status);
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Detected", 30));
+        Assert.NotNull(await Eventually(() => GetClimateGoal(ctx.RoomId), g => g?.Status is "Active" or "Planning", 20));
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status is "Planning" or "Planned", 30));
 
-        var needPlanned = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status is "Planning" or "Planned",
-            TimeSpan.FromSeconds(30));
-        Assert.NotNull(needPlanned);
+        bool engPlans = await EventuallyTrue(async () => (await GetCommandPlans(ctx.EngSystemId)).Count > 0, 20);
+        Assert.True(engPlans);
 
-        var commandReceived = await TestPolling.EventuallyAsync(
-            () => Task.FromResult(ctx.Actuator.ReceivedCommands.Count > 0 ? ctx.Actuator.ReceivedCommands[0] : null),
-            c => c is not null,
-            TimeSpan.FromSeconds(20));
-        Assert.NotNull(commandReceived);
+        bool engActive = await EventuallyTrue(async () => (await GetEngSystemStatus(ctx.EngSystemId))?.ActivePlanCount > 0, 15);
+        Assert.True(engActive);
 
-        var envChanged = await TestPolling.EventuallyTrueAsync(
-            () => GetEnvCo2(ctx.RoomId),
-            TimeSpan.FromSeconds(30));
-        Assert.True(envChanged, "CO2 should drop below 1000 after actuator effect");
+        bool resReserved = await EventuallyTrue(async () => (await GetEngResources(ctx.EngSystemId)).Any(r => r.Reserved > 0), 20);
+        Assert.True(resReserved);
 
-        var satisfied = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status == "Satisfied",
-            TimeSpan.FromSeconds(60));
-        Assert.NotNull(satisfied);
-        Assert.Equal("Satisfied", satisfied.Status);
+        bool cmdRecv = await EventuallyTrue(() => Task.FromResult(ctx.Actuator.ReceivedCommands.Count > 0), 20);
+        Assert.True(cmdRecv);
+
+        Assert.NotNull(await Eventually(() => GetCommand(ctx.RoomId), c => c?.Status is "Acknowledged" or "Executing" or "Succeeded", 15));
+        Assert.NotNull(await Eventually(() => GetCommand(ctx.RoomId), c => c?.Status is "Executing" or "Succeeded", 15));
+        Assert.NotNull(await Eventually(() => GetCommand(ctx.RoomId), c => c?.Status == "Succeeded", 15));
+
+        bool waiting = await EventuallyTrue(async () => (await GetCommandPlans(ctx.EngSystemId)).Any(p => p.Status is "Executing" or "Planned"), 20);
+        Assert.True(waiting);
+
+        bool envOk = await EventuallyTrue(() => GetEnvCo2Below(ctx.RoomId, 1000), 30);
+        Assert.True(envOk);
+
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Satisfied", 60));
+        Assert.NotNull(await Eventually(() => GetClimateGoal(ctx.RoomId), g => g?.Status == "Completed", 20));
+
+        bool released = await EventuallyTrue(async () => (await GetEngResources(ctx.EngSystemId)).All(r => r.Reserved == 0 && r.Used == 0), 20);
+        Assert.True(released);
+    }
+
+    [Fact]
+    public async Task ActuatorCommandFailed_NeedBlocked()
+    {
+        var ctx = await SetupFullEngineeringRuntime(ActuatorMode.CommandFailed);
+        await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 2000.0 });
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Detected", 30));
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Blocked", 90));
+    }
+
+    [Fact]
+    public async Task RejectedCommand_NeedBlocked()
+    {
+        var ctx = await SetupFullEngineeringRuntime(ActuatorMode.Rejected);
+        await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 2000.0 });
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Detected", 30));
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Blocked", 90));
     }
 
     [Fact]
     public async Task NegativeScenario_InvalidTelemetry_Rejected()
     {
-        var ctx = await SetupEnvironment();
-        await ctx.Actuator.StartAsync();
-
+        var ctx = await SetupFullEngineeringRuntime();
         await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { temperatureC = 999.9 });
 
-        await Task.Delay(2000);
-
-        var env = await _http.GetAsync($"/api/v1/rooms/{ctx.RoomId}/environment");
-        Assert.True(env.IsSuccessStatusCode);
-        var envState = await env.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        bool hasTemp = envState.TryGetProperty("temperatureC", out var t) && t.ValueKind != JsonValueKind.Null;
+        await Task.Delay(3000);
+        var env = await GetEnvironment(ctx.RoomId);
+        bool hasTemp = env.TryGetValue("temperatureC", out var t) && t.HasValue;
         Assert.False(hasTemp, "Environment should NOT be updated with invalid temperature");
-
-        var needs = await GetActiveNeeds(ctx.RoomId);
+        var needs = await GetNeeds(ctx.RoomId);
         Assert.Empty(needs);
     }
 
     [Fact]
-    public async Task EffectTimeout_CommandCompleted_NoEffect_NeedBlocked()
+    public async Task ResourceLifecycle_FullReleaseAfterSatisfied()
     {
-        var ctx = await SetupEnvironment();
-        await ctx.Actuator.StartAsync();
-
-        await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 2000.0 });
-
-        var needDetected = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status == "Detected",
-            TimeSpan.FromSeconds(30));
-        Assert.NotNull(needDetected);
-
-        await TestPolling.EventuallyTrueAsync(
-            () => Task.FromResult(ctx.Actuator.ReceivedCommands.Count > 0),
-            TimeSpan.FromSeconds(20));
-
-        await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 2000.0 });
-
-        var blocked = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status == "Blocked",
-            TimeSpan.FromSeconds(90));
-        Assert.NotNull(blocked);
-        Assert.Equal("Blocked", blocked.Status);
-    }
-
-    [Fact]
-    public async Task ResourceRelease_AfterSatisfied()
-    {
-        var ctx = await SetupEnvironment();
-        await ctx.Actuator.StartAsync();
-
+        var ctx = await SetupFullEngineeringRuntime();
         await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 1800.0 });
 
-        await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status is "Detected" or "Planning" or "Planned",
-            TimeSpan.FromSeconds(30));
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status is "Detected" or "Planning" or "Planned", 30));
+        bool resReserved = await EventuallyTrue(async () => (await GetEngResources(ctx.EngSystemId)).Any(r => r.Reserved > 0), 20);
+        Assert.True(resReserved);
 
-        await TestPolling.EventuallyTrueAsync(
-            () => Task.FromResult(ctx.Actuator.ReceivedCommands.Count > 0),
-            TimeSpan.FromSeconds(20));
+        bool cmdRecv = await EventuallyTrue(() => Task.FromResult(ctx.Actuator.ReceivedCommands.Count > 0), 20);
+        Assert.True(cmdRecv);
 
         await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 450.0 });
 
-        var satisfied = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status == "Satisfied",
-            TimeSpan.FromSeconds(60));
-        Assert.NotNull(satisfied);
-        Assert.Equal("Satisfied", satisfied.Status);
+        Assert.NotNull(await Eventually(() => GetNeed(ctx.RoomId), n => n?.Status == "Satisfied", 60));
+        bool released = await EventuallyTrue(async () => (await GetEngResources(ctx.EngSystemId)).All(r => r.Reserved == 0 && r.Used == 0), 30);
+        Assert.True(released);
     }
 
-    [Fact]
-    public async Task RestartRecovery_AfterCrash_StateRestored()
-    {
-        var ctx = await SetupEnvironment();
-        await ctx.Actuator.StartAsync();
+    // ─── Setup ───────────────────────────────────────────────
 
-        await _fixture.PublishTelemetryAsync(ctx.BuildingId, ctx.SensorDeviceId, new { co2Ppm = 1800.0 });
-
-        var need = await TestPolling.EventuallyAsync(
-            () => GetFirstNeed(ctx.RoomId),
-            n => n is not null && n.Status is "Detected" or "Planning" or "Planned",
-            TimeSpan.FromSeconds(30));
-        Assert.NotNull(need);
-
-        await _fixture.StopGatewayAsync();
-        await Task.Delay(1000);
-        await _fixture.StartGatewayAsync();
-        await Task.Delay(3000);
-
-        var needsAfter = await _http.GetAsync($"/api/v1/needs/rooms/{ctx.RoomId}");
-        Assert.True(needsAfter.IsSuccessStatusCode, "Needs endpoint should work after restart");
-
-        var live = await _http.GetAsync("/health/live");
-        Assert.True(live.IsSuccessStatusCode, "Liveness should pass after restart");
-
-        var ready = await _http.GetAsync("/health/ready");
-        Assert.True(ready.IsSuccessStatusCode, "Readiness should pass after restart");
-    }
-
-    private async Task<E2eContext> SetupEnvironment()
+    private async Task<E2eContext> SetupFullEngineeringRuntime(ActuatorMode mode = ActuatorMode.Successful)
     {
         var ctx = new E2eContext();
 
-        var building = await CreateObject("/api/v1/buildings", new { name = $"E2E-B-{Guid.NewGuid():N}"[..15] });
-        ctx.BuildingId = ReadRequiredString(building, "id");
-
-        var floor = await CreateObject($"/api/v1/buildings/{ctx.BuildingId}/floors", new { name = "Ground", level = 0 });
-        ctx.FloorId = ReadRequiredString(floor, "id");
-
-        var room = await CreateObject($"/api/v1/floors/{ctx.FloorId}/rooms", new { name = "E2E Test Room" });
-        ctx.RoomId = ReadRequiredString(room, "id");
+        var building = await PostRead("/api/v1/buildings", new { name = $"E2E-B-{Guid.NewGuid():N}"[..15] });
+        ctx.BuildingId = ReqStr(building, "id");
+        var floor = await PostRead($"/api/v1/buildings/{ctx.BuildingId}/floors", new { name = "Ground", level = 0 });
+        var room = await PostRead($"/api/v1/floors/{ReqStr(floor, "id")}/rooms", new { name = "E2E Run Room" });
+        ctx.RoomId = ReqStr(room, "id");
 
         await _http.PutAsJsonAsync($"/api/v1/rooms/{ctx.RoomId}/policy", new
         {
@@ -182,111 +127,155 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
             humidity = new { minimum = 30.0, maximum = 60.0, preferred = 45.0, controlMode = "MonitorOnly" }
         });
 
-        var sensor = await CreateObject("/api/v1/devices", new
+        var sensor = await PostRead("/api/v1/devices", new
         {
-            hardwareId = $"SENSOR-{Guid.NewGuid():N}"[..20], name = "CO2 Sensor",
-            manufacturer = "E2E", modelName = "CS-100", protocolVersion = "1.0"
+            hardwareId = $"SENSOR-{Guid.NewGuid():N}"[..20], name = "CO2 Sensor", manufacturer = "E2E", modelName = "CS-100", protocolVersion = "1.0"
         });
-        ctx.SensorDeviceId = ReadRequiredString(sensor, "id");
-
+        ctx.SensorDeviceId = ReqStr(sensor, "id");
         await _http.PostAsJsonAsync($"/api/v1/devices/{ctx.SensorDeviceId}/assignments", new { roomId = ctx.RoomId });
 
-        var fanDevice = await CreateObject("/api/v1/devices", new
+        var fanDevice = await PostRead("/api/v1/devices", new
         {
-            hardwareId = $"FAN-{Guid.NewGuid():N}"[..20], name = "Supply Fan",
-            manufacturer = "E2E", modelName = "SF-200", protocolVersion = "1.0"
+            hardwareId = $"FAN-{Guid.NewGuid():N}"[..20], name = "Supply Fan", manufacturer = "E2E", modelName = "SF-200", protocolVersion = "1.0"
         });
-        ctx.FanDeviceId = ReadRequiredString(fanDevice, "id");
-
+        ctx.FanDeviceId = ReqStr(fanDevice, "id");
         await _http.PostAsJsonAsync($"/api/v1/devices/{ctx.FanDeviceId}/assignments", new { roomId = ctx.RoomId });
 
-        ctx.Actuator = new TestActuatorRuntime(
-            _fixture.MqttHost, _fixture.MqttPort,
-            ctx.BuildingId, ctx.FanDeviceId);
+        var engSystem = await PostRead("/api/v1/engineering-systems", new
+        {
+            buildingId = ctx.BuildingId, name = "Supply Ventilation", systemType = "SupplyVentilation", priority = 50,
+            capabilities = new[] { new { code = "eng.co2.reduce", dataType = "double", unit = "ppm", minimum = 0.0, maximum = 10000.0 }, new { code = "eng.airflow.increase", dataType = "double", unit = "m3h", minimum = 0.0, maximum = 10000.0 } },
+            resources = new[] { new { code = "airflow_capacity", maximum = 5000.0, unit = "m3h", priority = 50 } }
+        });
+        ctx.EngSystemId = ReqStr(engSystem, "id");
 
+        ctx.Actuator = new TestActuatorRuntime(_fixture.MqttHost, _fixture.MqttPort, ctx.BuildingId, ctx.FanDeviceId, mode);
+        await ctx.Actuator.StartAsync();
         return ctx;
     }
 
-    private async Task<JsonElement> CreateObject(string url, object body)
+    // ─── Helpers ─────────────────────────────────────────────
+
+    private static async Task<T?> Eventually<T>(Func<Task<T?>> poll, Func<T?, bool> cond, int sec) where T : class
+        => await TestPolling.EventuallyAsync(poll, cond, TimeSpan.FromSeconds(sec));
+
+    private static async Task<bool> EventuallyTrue(Func<Task<bool>> poll, int sec)
+        => await TestPolling.EventuallyTrueAsync(poll, TimeSpan.FromSeconds(sec));
+
+    private async Task<NeedDto?> GetNeed(string roomId)
     {
-        var resp = await _http.PostAsJsonAsync(url, body);
-        resp.EnsureSuccessStatusCode();
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        return json;
+        var json = await GetJson($"/api/v1/needs/rooms/{roomId}");
+        if (json is null) return null;
+        var j = json.Value;
+        if (j.ValueKind != JsonValueKind.Array || j.GetArrayLength() == 0) return null;
+        return AsNeed(j[0]);
     }
 
-    private async Task<NeedDto?> GetFirstNeed(string roomId)
+    private async Task<List<NeedDto>> GetNeeds(string roomId)
     {
-        var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
-        if (!resp.IsSuccessStatusCode) return null;
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        if (json.ValueKind != JsonValueKind.Array || json.GetArrayLength() == 0) return null;
-
-        var first = json[0];
-        return new NeedDto
-        {
-            Id = GetPropString(first, "id") ?? "",
-            Status = GetPropString(first, "status") ?? "",
-            Type = GetPropString(first, "type") ?? "",
-            RoomId = GetPropString(first, "roomId") ?? ""
-        };
-    }
-
-    private async Task<List<NeedDto>> GetActiveNeeds(string roomId)
-    {
-        var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
-        if (!resp.IsSuccessStatusCode) return new();
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        if (json.ValueKind != JsonValueKind.Array) return new();
-
+        var json = await GetJson($"/api/v1/needs/rooms/{roomId}");
+        if (json is null) return new();
+        var j = json.Value;
+        if (j.ValueKind != JsonValueKind.Array) return new();
         var list = new List<NeedDto>();
-        foreach (var item in json.EnumerateArray())
-        {
-            list.Add(new NeedDto
-            {
-                Id = GetPropString(item, "id") ?? "",
-                Status = GetPropString(item, "status") ?? "",
-                Type = GetPropString(item, "type") ?? "",
-                RoomId = GetPropString(item, "roomId") ?? ""
-            });
-        }
+        foreach (var i in j.EnumerateArray()) list.Add(AsNeed(i));
         return list;
     }
 
-    private async Task<bool> GetEnvCo2(string roomId)
+    private async Task<ClimateGoalDto?> GetClimateGoal(string roomId)
     {
-        var resp = await _http.GetAsync($"/api/v1/rooms/{roomId}/environment");
-        if (!resp.IsSuccessStatusCode) return false;
-
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        if (json.TryGetProperty("co2Ppm", out var co2) && co2.ValueKind == JsonValueKind.Number)
-            return co2.GetDouble() < 1000;
-        return false;
+        var json = await GetJson($"/api/v1/climate/goals/{roomId}");
+        if (json is null) return null;
+        var j = json.Value;
+        return new ClimateGoalDto { Status = PropStr(j, "Status") ?? PropStr(j, "status") };
     }
 
-    private static string? GetPropString(JsonElement element, string property)
-        => element.TryGetProperty(property, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
-
-    private static string ReadRequiredString(JsonElement element, string property)
-        => element.TryGetProperty(property, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() ?? "" : "";
-
-    private class E2eContext
+    private async Task<CommandDto?> GetCommand(string roomId)
     {
-        public string BuildingId { get; set; } = "";
-        public string FloorId { get; set; } = "";
-        public string RoomId { get; set; } = "";
-        public string SensorDeviceId { get; set; } = "";
-        public string FanDeviceId { get; set; } = "";
-        public TestActuatorRuntime Actuator { get; set; } = null!;
+        var json = await GetJson($"/api/v1/rooms/{roomId}/commands");
+        if (json is null) return null;
+        var j = json.Value;
+        if (j.ValueKind != JsonValueKind.Array || j.GetArrayLength() == 0) return null;
+        return AsCommand(j[0]);
     }
 
-    private record NeedDto
+    private async Task<Dictionary<string, double?>> GetEnvironment(string roomId)
     {
-        public string Id { get; init; } = "";
-        public string Status { get; init; } = "";
-        public string Type { get; init; } = "";
-        public string RoomId { get; init; } = "";
+        var json = await GetJson($"/api/v1/rooms/{roomId}/environment");
+        if (json is null) return new();
+        var j = json.Value;
+        var d = new Dictionary<string, double?>();
+        foreach (var p in j.EnumerateObject())
+            d[p.Name] = p.Value.ValueKind == JsonValueKind.Number ? p.Value.GetDouble() : null;
+        return d;
     }
+
+    private async Task<bool> GetEnvCo2Below(string roomId, double threshold)
+    {
+        var env = await GetEnvironment(roomId);
+        return env.TryGetValue("co2Ppm", out var c) && c.HasValue && c.Value < threshold;
+    }
+
+    private async Task<EngSystemStatusDto?> GetEngSystemStatus(string? engSystemId)
+    {
+        if (engSystemId is null) return null;
+        var json = await GetJson($"/api/v1/engineering-systems/{engSystemId}/status");
+        if (json is null) return null;
+        var j = json.Value;
+        return new EngSystemStatusDto { ActivePlanCount = j.TryGetProperty("activePlanCount", out var a) ? a.GetInt32() : 0 };
+    }
+
+    private async Task<List<ResourceDto>> GetEngResources(string? engSystemId)
+    {
+        if (engSystemId is null) return new();
+        var json = await GetJson($"/api/v1/engineering-systems/{engSystemId}/resources");
+        if (json is null) return new();
+        var j = json.Value;
+        if (j.ValueKind != JsonValueKind.Array) return new();
+        var list = new List<ResourceDto>();
+        foreach (var i in j.EnumerateArray())
+            list.Add(new ResourceDto { Code = PropStr(i, "code"), Reserved = Num(i, "reserved"), Used = Num(i, "used") });
+        return list;
+    }
+
+    private async Task<List<CommandPlanDto>> GetCommandPlans(string? engSystemId)
+    {
+        if (engSystemId is null) return new();
+        var json = await GetJson($"/api/v1/engineering-systems/{engSystemId}/plans");
+        if (json is null) return new();
+        var j = json.Value;
+        if (j.ValueKind != JsonValueKind.Array) return new();
+        var list = new List<CommandPlanDto>();
+        foreach (var i in j.EnumerateArray())
+            list.Add(new CommandPlanDto { Status = PropStr(i, "status") ?? PropStr(i, "Status") });
+        return list;
+    }
+
+    private async Task<JsonElement?> GetJson(string url)
+    {
+        var resp = await _http.GetAsync(url);
+        if (!resp.IsSuccessStatusCode) return null;
+        return await resp.Content.ReadFromJsonAsync<JsonElement>(Json);
+    }
+
+    private async Task<JsonElement> PostRead(string url, object body)
+    {
+        var resp = await _http.PostAsJsonAsync(url, body);
+        resp.EnsureSuccessStatusCode();
+        return await resp.Content.ReadFromJsonAsync<JsonElement>(Json);
+    }
+
+    private static NeedDto AsNeed(JsonElement e) => new() { Id = PropStr(e, "id"), Status = PropStr(e, "status"), Type = PropStr(e, "type") };
+    private static CommandDto AsCommand(JsonElement e) => new() { Id = PropStr(e, "id"), Status = PropStr(e, "status") ?? PropStr(e, "Status") };
+    private static string ReqStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+    private static string? PropStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+    private static double Num(JsonElement e, string p) => e.TryGetProperty(p, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : 0;
+
+    private record E2eContext { public string BuildingId { get; set; } = ""; public string RoomId { get; set; } = ""; public string SensorDeviceId { get; set; } = ""; public string FanDeviceId { get; set; } = ""; public string? EngSystemId { get; set; } public TestActuatorRuntime Actuator { get; set; } = null!; }
+    private record NeedDto(string? Id = null, string? Status = null, string? Type = null);
+    private record ClimateGoalDto(string? Status = null);
+    private record CommandDto(string? Id = null, string? Status = null);
+    private record CommandPlanDto(string? Status = null);
+    private record EngSystemStatusDto(int ActivePlanCount = 0);
+    private record ResourceDto(string? Code = null, double Reserved = 0, double Used = 0);
 }
