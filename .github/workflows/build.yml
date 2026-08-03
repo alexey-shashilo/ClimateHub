@@ -44,9 +44,14 @@ jobs:
           echo "OS: $(uname -a)"
           echo "PWD: $(pwd)"
           echo "Sln: $(ls ClimateHub.sln 2>&1)"
-          echo "ArchTests: $(ls tests/ClimateHub.ArchitectureTests/bin/Debug/net9.0/*.dll 2>&1)"
+          echo "Tests DLL: $(find tests/ClimateHub.ArchitectureTests/bin -name '*.dll' -type f 2>&1)"
           echo "=== Running Architecture Tests ==="
-          dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx" -v d 2>&1
+          dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx" --logger "console;verbosity=detailed"
+          ARCH_ECODE=$?
+          echo "=== Architecture Tests Exit Code: $ARCH_ECODE ==="
+          echo "=== TRX files ==="
+          find . -name "*.trx" -type f 2>&1
+          exit "$ARCH_ECODE"
       - name: Unit Tests
         run: dotnet test tests/ClimateHub.UnitTests --logger "trx;LogFileName=unit.trx"
       - name: Device Gateway Tests
