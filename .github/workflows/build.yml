@@ -39,7 +39,14 @@ jobs:
       - name: Vulnerability Scan
         run: dotnet list package --vulnerable --include-transitive
       - name: Architecture Tests
-        run: dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx"
+        run: |
+          echo "=== Diagnostic ==="
+          echo "OS: $(uname -a)"
+          echo "PWD: $(pwd)"
+          echo "Sln: $(ls ClimateHub.sln 2>&1)"
+          echo "ArchTests: $(ls tests/ClimateHub.ArchitectureTests/bin/Debug/net9.0/*.dll 2>&1)"
+          echo "=== Running Architecture Tests ==="
+          dotnet test tests/ClimateHub.ArchitectureTests --logger "trx;LogFileName=architecture.trx" -v d 2>&1
       - name: Unit Tests
         run: dotnet test tests/ClimateHub.UnitTests --logger "trx;LogFileName=unit.trx"
       - name: Device Gateway Tests
