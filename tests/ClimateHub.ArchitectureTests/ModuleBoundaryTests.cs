@@ -273,6 +273,25 @@ public class ModuleBoundaryTests
     }
 
     [Fact]
+    public void EngCapabilityToDeviceCodes_HasNoDuplicateKeys()
+    {
+        var dictField = typeof(EngineeringCapabilityCodes)
+            .GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .First(f => f.Name == "EngCapabilityToDeviceCodes" &&
+                        f.FieldType == typeof(Dictionary<string, string[]>));
+
+        var dict = (System.Collections.IDictionary)dictField.GetValue(null)!;
+
+        var keys = new HashSet<string>();
+        foreach (var key in dict.Keys)
+        {
+            var keyStr = key as string;
+            Assert.NotNull(keyStr);
+            Assert.True(keys.Add(keyStr), $"Duplicate key in EngCapabilityToDeviceCodes: {keyStr}");
+        }
+    }
+
+    [Fact]
     public async Task EndpointsWithBuildingId_HaveRequireBuildingAccess()
     {
         var endpointFiles = Directory.GetFiles(

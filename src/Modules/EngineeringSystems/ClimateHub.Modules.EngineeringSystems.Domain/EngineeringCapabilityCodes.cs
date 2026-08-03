@@ -57,10 +57,6 @@ public static class EngineeringCapabilityCodes
         [DecreaseHumidity] = ["control.fan-speed"],
         [ReduceCo2] = ["control.fan-speed"],
         [IncreaseAirFlow] = ["control.fan-speed", "control.damper-position"],
-        [IncreaseIlluminance] = ["control.lighting"],
-        [DecreaseIlluminance] = ["control.lighting"],
-        [OpenCurtains] = ["control.relay"],
-        [CloseCurtains] = ["control.relay"],
         [IncreaseIlluminance] = ["control.lighting", "control.dimmer"],
         [DecreaseIlluminance] = ["control.lighting", "control.dimmer"],
         [LightingScene] = ["control.scene"],
@@ -69,8 +65,8 @@ public static class EngineeringCapabilityCodes
         [BlindPosition] = ["control.blind-motor"],
         [CurtainPosition] = ["control.curtain-motor"],
         [ShadingProtection] = ["control.blind-motor", "control.facade-screen"],
-        [OpenCurtains] = ["control.curtain-motor"],
-        [CloseCurtains] = ["control.curtain-motor"],
+        [OpenCurtains] = ["control.relay", "control.curtain-motor"],
+        [CloseCurtains] = ["control.relay", "control.curtain-motor"],
     };
 
     private static readonly Dictionary<string, string> EngCapabilityToDeviceRole = new()
