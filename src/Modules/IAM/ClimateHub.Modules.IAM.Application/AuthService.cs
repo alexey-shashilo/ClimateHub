@@ -62,22 +62,23 @@ public class AuthService : IAuthService
         var permissions = roles.SelectMany(r => r.Permissions).Distinct().ToList();
 
         var accessToken = GenerateAccessToken(user, roles, permissions);
-        var refreshToken = GenerateRefreshToken();
-        var tokenFamilyId = Guid.NewGuid();
+        var (rawToken, tokenHash) = GenerateRefreshToken();
+        var familyId = Guid.NewGuid();
 
         var refreshSession = new RefreshSession(
             Guid.NewGuid(),
             user.Id,
-            refreshToken,
-            tokenFamilyId,
-            DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays));
+            tokenHash,
+            familyId,
+            DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
+            createdByIp: request.IpAddress);
 
         await _refreshSessionRepository.AddAsync(refreshSession, ct);
 
         return new LoginResponse
         {
             AccessToken = accessToken,
-            RefreshToken = refreshToken,
+            RefreshToken = rawToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
             User = new UserInfo
             {
@@ -92,60 +93,59 @@ public class AuthService : IAuthService
 
     public async Task<RefreshResponse> RefreshTokenAsync(RefreshRequest request, CancellationToken ct = default)
     {
-        var session = await _refreshSessionRepository.GetByRefreshTokenAsync(request.RefreshToken, ct);
+        var tokenHash = RefreshSession.HashToken(request.RefreshToken);
+        var session = await _refreshSessionRepository.GetByTokenHashAsync(tokenHash, ct);
 
-        // Token theft detection: if token is revoked (already consumed or stolen), revoke entire family
-        if (session is null || session.IsRevoked)
+        if (session is null)
+            throw new UnauthorizedAccessException("Invalid refresh token");
+
+        // Reuse detection: if token was already consumed or revoked, revoke entire family
+        if (!session.IsActive)
         {
-            if (session is not null)
-            {
-                await _refreshSessionRepository.RevokeFamilyAsync(session.TokenFamilyId, ct);
-            }
-            throw new UnauthorizedAccessException("Invalid or expired refresh token");
+            await _refreshSessionRepository.RevokeFamilyAsync(session.FamilyId, "TOKEN_REUSE_DETECTED", ct);
+            throw new UnauthorizedAccessException("Refresh token reuse detected");
         }
-
-        if (session.IsExpired)
-            throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
         var user = await _userRepository.GetByIdAsync(session.UserId, ct);
         if (user is null || !user.IsActive)
             throw new UnauthorizedAccessException("User not found or inactive");
 
-        // Rotation enforcement: consume the old token
-        session.Revoke();
-        await _refreshSessionRepository.UpdateAsync(session, ct);
-
         var roles = await _userRepository.GetUserRolesAsync(user.Id, ct);
         var permissions = roles.SelectMany(r => r.Permissions).Distinct().ToList();
 
         var newAccessToken = GenerateAccessToken(user, roles, permissions);
-        var newRefreshToken = GenerateRefreshToken();
+        var (newRawToken, newTokenHash) = GenerateRefreshToken();
 
         // Rotate within same family
         var newSession = new RefreshSession(
             Guid.NewGuid(),
             user.Id,
-            newRefreshToken,
-            session.TokenFamilyId,
-            DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays));
+            newTokenHash,
+            session.FamilyId,
+            DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
+            parentSessionId: session.Id);
 
+        // Mark old as consumed, linking to new session
+        session.MarkConsumed(newSession.Id);
+        await _refreshSessionRepository.UpdateAsync(session, ct);
         await _refreshSessionRepository.AddAsync(newSession, ct);
 
         return new RefreshResponse
         {
             AccessToken = newAccessToken,
-            RefreshToken = newRefreshToken,
+            RefreshToken = newRawToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes)
         };
     }
 
     public async Task RevokeTokenAsync(string refreshToken, Guid userId, CancellationToken ct = default)
     {
-        var session = await _refreshSessionRepository.GetByRefreshTokenAsync(refreshToken, ct);
+        var tokenHash = RefreshSession.HashToken(refreshToken);
+        var session = await _refreshSessionRepository.GetByTokenHashAsync(tokenHash, ct);
         if (session is null || session.UserId != userId)
             return;
 
-        session.Revoke();
+        session.Revoke("USER_REVOKED");
         await _refreshSessionRepository.UpdateAsync(session, ct);
     }
 
@@ -199,11 +199,12 @@ public class AuthService : IAuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private static string GenerateRefreshToken()
+    private static (string rawToken, string tokenHash) GenerateRefreshToken()
     {
         var randomBytes = new byte[64];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
-        return Convert.ToBase64String(randomBytes);
+        var raw = Convert.ToBase64String(randomBytes);
+        return (raw, RefreshSession.HashToken(raw));
     }
 }

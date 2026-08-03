@@ -58,12 +58,21 @@ public class IamDbContext : DbContext
         {
             e.ToTable("refresh_sessions");
             e.HasKey(x => x.Id);
-            e.Property(x => x.RefreshToken).HasMaxLength(512).IsRequired();
             e.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
             e.HasIndex(x => x.TokenHash).IsUnique();
-            e.Property(x => x.TokenFamilyId).IsRequired();
-            e.HasIndex(x => x.TokenFamilyId);
+            e.Property(x => x.FamilyId).IsRequired();
+            e.HasIndex(x => x.FamilyId);
             e.Property(x => x.UserId).IsRequired();
+            e.Property(x => x.ParentSessionId);
+            e.Property(x => x.ReplacedBySessionId);
+            e.Property(x => x.RevocationReason).HasMaxLength(256);
+            e.Property(x => x.CreatedByIp).HasMaxLength(64);
+            e.Property(x => x.Version).IsRequired().HasDefaultValue(1);
+            e.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            e.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone");
+            e.Property(x => x.ConsumedAt).HasColumnType("timestamp with time zone");
+            e.Property(x => x.RevokedAt).HasColumnType("timestamp with time zone");
+            e.Property(x => x.LastUsedAt).HasColumnType("timestamp with time zone");
         });
     }
 }
