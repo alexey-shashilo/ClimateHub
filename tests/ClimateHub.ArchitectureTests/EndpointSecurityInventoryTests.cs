@@ -16,9 +16,9 @@ public class EndpointSecurityInventoryTests
         {
             if (File.Exists(Path.Combine(dir, "ClimateHub.sln")))
                 return dir;
-            var parent = Directory.GetParent(dir);
-            if (parent is null || parent.FullName == dir) break;
-            dir = parent.FullName;
+            var parent = Path.GetDirectoryName(dir);
+            if (parent is null || parent == dir) break;
+            dir = parent;
         }
         throw new DirectoryNotFoundException("Solution dir not found");
     }

@@ -7,40 +7,41 @@ namespace ClimateHub.ArchitectureTests;
 public class DependencyRuleTests
 {
     private static readonly string SolutionDir = FindSolutionDir();
+    private static string Src(params string[] p) => Path.Combine(SolutionDir, "src", Path.Combine(p));
+    private static string R(string rel) => Path.GetFullPath(Path.Combine(SolutionDir, rel.Replace('\\', Path.DirectorySeparatorChar)));
 
     [Fact]
     public void NeedDomain_ShouldNotReference_Engineering()
     {
-        var refs = GetProjectReferences(@"src\Modules\Needs\ClimateHub.Modules.Needs.Domain\ClimateHub.Modules.Needs.Domain.csproj");
+        var refs = GetProjectReferences(R(@"src\Modules\Needs\ClimateHub.Modules.Needs.Domain\ClimateHub.Modules.Needs.Domain.csproj"));
         Assert.DoesNotContain(refs, r => r.Name.Contains("Engineering"));
     }
 
     [Fact]
     public void NeedInfrastructure_ShouldNotReference_EngineeringApplication()
     {
-        var refs = GetProjectReferences(@"src\Modules\Needs\ClimateHub.Modules.Needs.Infrastructure\ClimateHub.Modules.Needs.Infrastructure.csproj");
+        var refs = GetProjectReferences(R(@"src\Modules\Needs\ClimateHub.Modules.Needs.Infrastructure\ClimateHub.Modules.Needs.Infrastructure.csproj"));
         Assert.DoesNotContain(refs, r => r.Name.Contains("EngineeringSystems.Application"));
     }
 
     [Fact]
     public void ClimateDomain_ShouldNotReference_Devices()
     {
-        var refs = GetProjectReferences(@"src\Modules\Climate\ClimateHub.Modules.Climate.Domain\ClimateHub.Modules.Climate.Domain.csproj");
+        var refs = GetProjectReferences(R(@"src\Modules\Climate\ClimateHub.Modules.Climate.Domain\ClimateHub.Modules.Climate.Domain.csproj"));
         Assert.DoesNotContain(refs, r => r.Name.Contains("Devices"));
     }
 
     [Fact]
     public void EngineeringDomain_ShouldNotReference_EnvironmentInfrastructure()
     {
-        var refs = GetProjectReferences(
-            @"src\Modules\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Domain\ClimateHub.Modules.EngineeringSystems.Domain.csproj");
+        var refs = GetProjectReferences(R(@"src\Modules\EngineeringSystems\ClimateHub.Modules.EngineeringSystems.Domain\ClimateHub.Modules.EngineeringSystems.Domain.csproj"));
         Assert.DoesNotContain(refs, r => r.Name.Contains("Environment.Infrastructure"));
     }
 
     [Fact]
     public void Api_ShouldNotReference_InfrastructureEntities()
     {
-        var refs = GetProjectReferences(@"src\ClimateHub.Api\ClimateHub.Api.csproj");
+        var refs = GetProjectReferences(R(@"src\ClimateHub.Api\ClimateHub.Api.csproj"));
         var infraEntities = refs.Where(r =>
             r.Name.Contains("ClimateHub.Modules") && r.Name.Contains("Domain"));
         var allowedDomainRefs = new[]
@@ -162,7 +163,7 @@ public class DependencyRuleTests
     [Fact]
     public void Api_ShouldNotReference_WorkerHostedServices()
     {
-        var apiRefs = GetProjectReferences(@"src\ClimateHub.Api\ClimateHub.Api.csproj");
+        var apiRefs = GetProjectReferences(R(@"src\ClimateHub.Api\ClimateHub.Api.csproj"));
         foreach (var r in apiRefs)
         {
             if (r.Name.Contains("Worker") || r.Name.Contains("BackgroundService"))
@@ -200,9 +201,9 @@ public class DependencyRuleTests
         {
             if (File.Exists(Path.Combine(dir, "ClimateHub.sln")))
                 return dir;
-            var parent = Directory.GetParent(dir);
-            if (parent is null || parent.FullName == dir) break;
-            dir = parent.FullName;
+            var parent = Path.GetDirectoryName(dir);
+            if (parent is null || parent == dir) break;
+            dir = parent;
         }
         throw new DirectoryNotFoundException($"Could not find solution dir from {AppContext.BaseDirectory}");
     }
@@ -213,10 +214,9 @@ public class DependencyRuleTests
         return match.Success ? match.Groups[1].Value : projectName;
     }
 
-    private List<ProjectReference> GetProjectReferences(string relativePath)
+    private List<ProjectReference> GetProjectReferences(string csprojPath)
     {
-        var fullPath = Path.GetFullPath(Path.Combine(SolutionDir, relativePath));
-        var content = File.ReadAllText(fullPath);
+        var content = File.ReadAllText(csprojPath);
         var refs = new List<ProjectReference>();
 
         var lines = content.Split('\n');

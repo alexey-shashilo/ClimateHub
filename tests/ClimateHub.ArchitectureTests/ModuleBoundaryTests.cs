@@ -317,7 +317,8 @@ public class ModuleBoundaryTests
 
     private List<ProjectReference> GetProjectReferences(string relativePath)
     {
-        var fullPath = Path.GetFullPath(Path.Combine(SolutionDir, relativePath));
+        var normalized = relativePath.Replace('\\', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(SolutionDir, normalized));
         var content = File.ReadAllText(fullPath);
         var refs = new List<ProjectReference>();
 
