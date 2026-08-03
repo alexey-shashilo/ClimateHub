@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -66,7 +67,7 @@ public class DependencyRuleTests
 
         foreach (var file in diFiles)
         {
-            var content = await File.ReadAllTextAsync(file);
+            var content = await File.ReadAllTextAsync(file, Encoding.UTF8);
             Assert.DoesNotContain("AddSingleton<ICapabilityRegistry", content);
         }
     }
@@ -76,11 +77,11 @@ public class DependencyRuleTests
     {
         var srcDir = Path.Combine(SolutionDir, "src");
         var csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories)
-            .Where(f => !f.Contains("obj") && !f.Contains("bin") && !f.Contains("Migrations"));
+            .Where(f => !f.Contains("obj") && !f.Contains("bin") && !f.Contains("Migrations") && !f.Contains("node_modules"));
 
         foreach (var file in csFiles)
         {
-            var content = File.ReadAllText(file);
+            var content = File.ReadAllText(file, Encoding.UTF8);
             var lines = content.Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
@@ -101,7 +102,7 @@ public class DependencyRuleTests
 
         foreach (var file in codesFiles)
         {
-            var content = File.ReadAllText(file);
+            var content = File.ReadAllText(file, Encoding.UTF8);
             var matches = Regex.Matches(content, @"const string (\w+)\s*=\s*""([^""]+)""");
             var codes = new HashSet<string>();
             foreach (Match match in matches)
@@ -123,7 +124,7 @@ public class DependencyRuleTests
 
         foreach (var file in infraProjectFiles)
         {
-            var content = File.ReadAllText(file);
+            var content = File.ReadAllText(file, Encoding.UTF8);
             var projectName = Path.GetFileNameWithoutExtension(file);
             var moduleName = ExtractModuleName(projectName);
 
@@ -147,7 +148,7 @@ public class DependencyRuleTests
 
         foreach (var file in domainProjectFiles)
         {
-            var content = File.ReadAllText(file);
+            var content = File.ReadAllText(file, Encoding.UTF8);
             var refs = Regex.Matches(content, @"ProjectReference.*Include=""([^""]+)""");
             foreach (Match match in refs)
             {
@@ -181,7 +182,7 @@ public class DependencyRuleTests
 
         foreach (var file in domainProjectFiles)
         {
-            var content = File.ReadAllText(file);
+            var content = File.ReadAllText(file, Encoding.UTF8);
             var refs = Regex.Matches(content, @"ProjectReference.*Include=""([^""]+)""");
             foreach (Match match in refs)
             {
@@ -216,7 +217,7 @@ public class DependencyRuleTests
 
     private List<ProjectReference> GetProjectReferences(string csprojPath)
     {
-        var content = File.ReadAllText(csprojPath);
+        var content = File.ReadAllText(csprojPath, Encoding.UTF8);
         var refs = new List<ProjectReference>();
 
         var lines = content.Split('\n');
