@@ -66,9 +66,30 @@ jobs:
           name: recovery-test-results
           path: '**/*.trx'
 
+  deployment-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build
+        run: dotnet build
+      - name: Backup/Restore Tests
+        run: dotnet test --filter "FullyQualifiedName~BackupRestoreTests" --logger "trx;LogFileName=backup.trx"
+      - name: Deploy Full Stack Tests
+        run: dotnet test --filter "FullyQualifiedName~DeploymentVerificationTests&!Category=Deployment" --logger "trx;LogFileName=deploy-full.trx"
+      - name: Upload Deploy Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-test-results
+          path: '**/*.trx'
+
   required-checks-complete:
     runs-on: ubuntu-latest
-    needs: [mqtt-tests, e2e-tests, recovery-tests]
+    needs: [mqtt-tests, e2e-tests, recovery-tests, deployment-tests]
     if: always()
     steps:
       - name: Check Build Status
@@ -76,9 +97,11 @@ jobs:
           echo "MQTT Tests: ${{ needs.mqtt-tests.result }}"
           echo "E2E Tests: ${{ needs.e2e-tests.result }}"
           echo "Recovery Tests: ${{ needs.recovery-tests.result }}"
+          echo "Deployment Tests: ${{ needs.deployment-tests.result }}"
           if [ "${{ needs.mqtt-tests.result }}" = "success" ] && \
              [ "${{ needs.e2e-tests.result }}" = "success" ] && \
-             [ "${{ needs.recovery-tests.result }}" = "success" ]; then
+             [ "${{ needs.recovery-tests.result }}" = "success" ] && \
+             [ "${{ needs.deployment-tests.result }}" = "success" ]; then
             echo "All integration checks passed"
           else
             echo "Some integration checks failed - PR cannot be merged"
