@@ -89,7 +89,7 @@ try
         });
 
     builder.Services.AddAuthorization();
-    builder.Services.AddSingleton<IAuthorizationHandler, ClimateHub.Api.Authorization.BuildingAccessHandler>();
+    builder.Services.AddScoped<IAuthorizationHandler, ClimateHub.Api.Authorization.BuildingAccessHandler>();
     builder.Services.AddSingleton<IAuthorizationHandler, ClimateHub.Api.Authorization.PermissionHandler>();
 
     var app = builder.Build();
