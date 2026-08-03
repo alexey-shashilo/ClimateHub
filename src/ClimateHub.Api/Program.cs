@@ -14,13 +14,12 @@ using ClimateHub.Modules.Climate;
 using ClimateHub.Modules.Climate.Infrastructure;
 using ClimateHub.Modules.EngineeringSystems;
 using ClimateHub.Modules.EngineeringSystems.Infrastructure;
+using ClimateHub.Infrastructure.Audit;
 using ClimateHub.Modules.IAM;
 using ClimateHub.Modules.IAM.Domain;
 using ClimateHub.Api.Authorization;
-using ClimateHub.Infrastructure.Audit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using Serilog;
@@ -116,49 +115,6 @@ try
     }
 
     var argsList = args.ToList();
-
-    if (argsList.Contains("--migrate-only"))
-    {
-        using (var scope = app.Services.CreateScope())
-        {
-            var sp = scope.ServiceProvider;
-            var dbContexts = new DbContext[]
-            {
-                sp.GetRequiredService<BuildingDbContext>(),
-                sp.GetRequiredService<DevicesDbContext>(),
-                sp.GetRequiredService<EnvironmentDbContext>(),
-                sp.GetRequiredService<NeedsDbContext>(),
-                sp.GetRequiredService<EngineeringSystemsDbContext>(),
-                sp.GetRequiredService<ClimateDbContext>(),
-                sp.GetRequiredService<InternalEventsDbContext>(),
-                sp.GetRequiredService<ClimateHub.Modules.IAM.Infrastructure.IamDbContext>(),
-                sp.GetRequiredService<AuditLogDbContext>()
-            };
-
-            foreach (var ctx in dbContexts)
-            {
-                await ctx.Database.MigrateAsync();
-            }
-
-            Log.Information("Database migrations applied successfully");
-        }
-
-        if (argsList.Contains("--seed") && app.Environment.IsDevelopment())
-        {
-            using (var scope = app.Services.CreateScope())
-            {
-                var sp = scope.ServiceProvider;
-                await ClimateHub.Api.Seeding.SeedDevelopmentData.SeedAsync(
-                    sp.GetRequiredService<BuildingDbContext>(),
-                    sp.GetRequiredService<DevicesDbContext>(),
-                    sp.GetRequiredService<EnvironmentDbContext>());
-                Log.Information("Development seed data applied");
-            }
-        }
-
-        Log.Information("Migration complete, exiting");
-        return;
-    }
 
     if (argsList.Contains("--validate-config"))
     {
