@@ -1,5 +1,6 @@
 using ClimateHub.Modules.Climate.Domain.ClimateGoals;
 using ClimateHub.Modules.Environment.Contracts;
+using ClimateHub.Modules.Needs.Contracts;
 using ClimateHub.SharedKernel.Primitives;
 
 namespace ClimateHub.Modules.Climate.Application.GoalPlanning;
@@ -8,17 +9,24 @@ public class GoalPlanner
 {
     private readonly IRoomEnvironmentStateReader _envReader;
     private readonly IRoomPolicyReader _policyReader;
+    private readonly IRoomBuildingResolver _roomBuildingResolver;
 
-    public GoalPlanner(IRoomEnvironmentStateReader envReader, IRoomPolicyReader policyReader)
+    public GoalPlanner(IRoomEnvironmentStateReader envReader, IRoomPolicyReader policyReader,
+        IRoomBuildingResolver roomBuildingResolver)
     {
         _envReader = envReader;
         _policyReader = policyReader;
+        _roomBuildingResolver = roomBuildingResolver;
     }
 
     public async Task<ClimateGoal> CreateOrUpdateGoalAsync(RoomId roomId,
         StrategyProfile profile = StrategyProfile.Comfort,
         CancellationToken ct = default)
     {
+        var buildingId = await _roomBuildingResolver.ResolveBuildingIdAsync(roomId, ct);
+        if (buildingId is null)
+            throw new InvalidOperationException($"No building found for room {roomId}");
+
         var parameters = await _envReader.GetParametersAsync(roomId, ct);
         var policy = await _policyReader.GetByRoomAsync(roomId, ct);
 
@@ -28,7 +36,7 @@ public class GoalPlanner
         var illuminance = GetIlluminanceTarget(profile, policy);
 
         var goal = ClimateGoal.Create(
-            BuildingId.From(Guid.Empty), roomId,
+            buildingId.Value, roomId,
             temp, tempMin, tempMax,
             hum, humMin, humMax,
             co2, co2Max, illuminance,
