@@ -113,7 +113,11 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
     private async Task<E2eContext> SetupFullEngineeringRuntime(ActuatorMode mode = ActuatorMode.Successful)
     {
         var ctx = new E2eContext();
-
+        
+        // Verify API is accessible first
+        var live = await _http.GetAsync("/health/live");
+        Assert.True(live.IsSuccessStatusCode, "Health check should pass first");
+        
         var building = await PostRead("/api/v1/buildings", new { name = $"E2E-B-{Guid.NewGuid():N}"[..15] });
         ctx.BuildingId = ReqStr(building, "id");
         var floor = await PostRead($"/api/v1/buildings/{ctx.BuildingId}/floors", new { name = "Ground", level = 0 });
@@ -261,7 +265,12 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
     private async Task<JsonElement> PostRead(string url, object body)
     {
         var resp = await _http.PostAsJsonAsync(url, body);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+        {
+            var bodyText = await resp.Content.ReadAsStringAsync();
+            System.Diagnostics.Debug.WriteLine($"PostRead {url}: {(int)resp.StatusCode} {resp.ReasonPhrase} — {bodyText}");
+            resp.EnsureSuccessStatusCode();
+        }
         return await resp.Content.ReadFromJsonAsync<JsonElement>(Json);
     }
 
