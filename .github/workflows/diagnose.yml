@@ -1,0 +1,36 @@
+name: Diagnose Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [diagnose/**]
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Step 1 — dotnet restore
+        run: dotnet restore 2>&1 | tee step1.log
+      - name: Step 2 — dotnet build
+        run: dotnet build 2>&1 | tee step2.log
+      - name: Step 3 — test architecture
+        run: dotnet test tests/ClimateHub.ArchitectureTests 2>&1 | tee step3.log
+      - name: Step 4 — test unit (first project only)
+        run: |
+          first=$(ls -d tests/ClimateHub.Modules.*.UnitTests | head -1)
+          echo "Testing first unit project: $first"
+          dotnet test "$first" 2>&1 | tee step4.log
+      - name: Step 5 — test gateway
+        run: dotnet test tests/ClimateHub.DeviceGatewayTests 2>&1 | tee step5.log
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: step*.log
+          retention-days: 3
