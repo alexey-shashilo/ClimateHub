@@ -333,7 +333,8 @@ public class ModuleBoundaryTests
                 if (includeStart > 8 && includeEnd > includeStart)
                 {
                     var include = trimmed[includeStart..includeEnd];
-                    var name = Path.GetFileNameWithoutExtension(include);
+                    var normalizedInclude = include.Replace('\\', Path.DirectorySeparatorChar);
+                    var name = Path.GetFileNameWithoutExtension(normalizedInclude);
                     refs.Add(new ProjectReference(name, include));
                 }
             }
