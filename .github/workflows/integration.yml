@@ -15,12 +15,18 @@ jobs:
         ports:
           - 1883:1883
         options: >-
-          --health-cmd "timeout 5 sh -c 'mosquitto_sub -t test -C 1 & mosquitto_pub -t test -m ok || exit 1'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 3
+          --health-cmd "timeout 5 mosquitto_sub -t test -C 1 || exit 1"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      - name: Startup Mosquitto with anon access
+        run: |
+          docker exec $(docker ps -q --filter "label=com.docker.compose.service=mosquitto") \
+            sh -c "echo -e 'listener 1883\nallow_anonymous true\npersistence false' > /mosquitto/config/mosquitto.conf && \
+            mosquitto -c /mosquitto/config/mosquitto.conf -d" || true
+          sleep 2
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
