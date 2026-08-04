@@ -69,10 +69,10 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         await _mqttContainer.StartAsync();
         await _influxDbContainer.StartAsync();
 
-        PostgresConnectionString = $"Host={_postgresContainer.Hostname};Port={_postgresContainer.GetMappedPublicPort(5432)};Database=climate_hub_e2e;Username=climate_hub;Password=climate_hub_e2e;";
+        PostgresConnectionString = $"Host=localhost;Port={_postgresContainer.GetMappedPublicPort(5432)};Database=climate_hub_e2e;Username=climate_hub;Password=climate_hub_e2e;";
         MqttPort = _mqttContainer.GetMappedPublicPort(1883);
-        MqttHost = _mqttContainer.Hostname ?? "localhost";
-        InfluxDbUrl = $"http://{_influxDbContainer.Hostname}:{_influxDbContainer.GetMappedPublicPort(8086)}";
+        MqttHost = "localhost";
+        InfluxDbUrl = $"http://localhost:{_influxDbContainer.GetMappedPublicPort(8086)}";
 
         AuthToken = TestAuthHelper.GenerateToken();
         ApiClient = CreateAuthenticatedClient();

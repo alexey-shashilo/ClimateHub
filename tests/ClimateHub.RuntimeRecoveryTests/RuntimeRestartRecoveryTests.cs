@@ -38,8 +38,9 @@ public class RuntimeRestartRecoveryTests : IAsyncLifetime
     {
         await _postgres.StartAsync();
         await _mqtt.StartAsync();
-        _connectionString = $"Host={_postgres.Hostname};Port={_postgres.GetMappedPublicPort(5432)};Database=climate_hub_recovery;Username=climate_hub;Password=climate_hub_recovery;";
+        _connectionString = $"Host=localhost;Port={_postgres.GetMappedPublicPort(5432)};Database=climate_hub_recovery;Username=climate_hub;Password=climate_hub_recovery;";
         _mqttPort = _mqtt.GetMappedPublicPort(1883);
+        _mqttHost = "localhost";
     }
 
     public async Task DisposeAsync()
