@@ -89,6 +89,7 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseSetting("Environment", "Test");
         builder.UseEnvironment("Test");
         builder.ConfigureAppConfiguration((context, config) =>
         {

@@ -48,12 +48,30 @@ public class MqttComponentTests : IAsyncLifetime
         _mqttPort = _mosquittoContainer.GetMappedPublicPort(1883);
     }
 
+    private IMqttClient? _subscriber;
+
     public async Task DisposeAsync()
     {
+        if (_subscriber?.IsConnected == true)
+            await _subscriber.DisconnectAsync();
+        _subscriber?.Dispose();
         if (_client?.IsConnected == true)
             await _client.DisconnectAsync();
         _client?.Dispose();
         await _mosquittoContainer.DisposeAsync();
+    }
+
+    private async Task EnsureSubscriber(string topic)
+    {
+        if (_subscriber?.IsConnected == true) return;
+        var factory = new MqttClientFactory();
+        _subscriber = factory.CreateMqttClient();
+        await _subscriber.ConnectAsync(new MqttClientOptionsBuilder()
+            .WithTcpServer("localhost", _mqttPort)
+            .WithClientId($"sub-{Guid.NewGuid():N}"[..20])
+            .WithCleanSession().Build());
+        await _subscriber.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
+            .WithTopicFilter(topic, MqttQualityOfServiceLevel.AtLeastOnce).Build());
     }
 
     [Fact]
@@ -90,6 +108,7 @@ public class MqttComponentTests : IAsyncLifetime
     public async Task ValidTelemetry_PublishesSuccessfully()
     {
         await ConnectAuthenticatedClient();
+        await EnsureSubscriber(ValidTopic);
 
         var telemetry = JsonSerializer.Serialize(new
         {
@@ -119,6 +138,7 @@ public class MqttComponentTests : IAsyncLifetime
     public async Task InvalidTopic_PublishFails()
     {
         await ConnectAuthenticatedClient();
+        await EnsureSubscriber(InvalidTopic);
 
         var message = new MqttApplicationMessageBuilder()
             .WithTopic(InvalidTopic)
@@ -134,6 +154,7 @@ public class MqttComponentTests : IAsyncLifetime
     public async Task InvalidPayload_PublishesButInvalid()
     {
         await ConnectAuthenticatedClient();
+        await EnsureSubscriber(ValidTopic);
 
         var message = new MqttApplicationMessageBuilder()
             .WithTopic(ValidTopic)
@@ -149,6 +170,7 @@ public class MqttComponentTests : IAsyncLifetime
     public async Task CommandPublish_AckProgressResult()
     {
         await ConnectAuthenticatedClient();
+        await EnsureSubscriber($"climate-hub/v1/building-001/device-001/command/+");
         var commandId = Guid.NewGuid().ToString();
 
         var command = JsonSerializer.Serialize(new

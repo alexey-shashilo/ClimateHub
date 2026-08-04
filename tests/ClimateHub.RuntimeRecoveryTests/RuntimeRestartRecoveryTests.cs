@@ -75,6 +75,7 @@ public class RuntimeRestartRecoveryTests : IAsyncLifetime
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.UseSetting("Environment", "Test");
             builder.UseEnvironment("Test");
             builder.ConfigureAppConfiguration((context, config) =>
             {
