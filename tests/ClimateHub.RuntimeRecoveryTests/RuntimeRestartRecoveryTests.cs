@@ -76,6 +76,9 @@ public class RuntimeRestartRecoveryTests : IAsyncLifetime
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.UseSetting("Jwt:SigningKey", "test-signing-key-that-is-at-least-32-characters-long");
+            builder.UseSetting("Jwt:Issuer", "ClimateHub");
+            builder.UseSetting("Jwt:Audience", "ClimateHub.Api");
             builder.ConfigureAppConfiguration((context, config) =>
             {
                 config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -85,8 +88,6 @@ public class RuntimeRestartRecoveryTests : IAsyncLifetime
                     ["Mqtt:ReconnectBaseDelayMs"] = "1000", ["Mqtt:ReconnectMaxDelayMs"] = "5000",
                     ["InfluxDb:Url"] = "http://localhost:8086", ["InfluxDb:Token"] = "recovery-token",
                     ["InfluxDb:Organization"] = "climate-hub", ["InfluxDb:Bucket"] = "climate-hub",
-                    ["Jwt:SigningKey"] = "test-signing-key-that-is-at-least-32-characters-long",
-                    ["Jwt:Issuer"] = "ClimateHub", ["Jwt:Audience"] = "ClimateHub.Api",
                 });
             });
         }
