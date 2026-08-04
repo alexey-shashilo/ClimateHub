@@ -80,10 +80,16 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         await StartGatewayAsync();
     }
 
+    public string CreateToken()
+    {
+        return TestAuthHelper.GenerateToken();
+    }
+
     public HttpClient CreateAuthenticatedClient()
     {
         var client = CreateClient();
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthToken);
+        var token = CreateToken();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         return client;
     }
 
