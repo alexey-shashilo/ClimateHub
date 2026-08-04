@@ -108,6 +108,15 @@ public class DeploymentConfigTests
             if (parent is null || parent.FullName == dir) break;
             dir = parent.FullName;
         }
-        throw new DirectoryNotFoundException("Repo root not found");
+        var cwd = Directory.GetCurrentDirectory();
+        for (int i = 0; i < 8; i++)
+        {
+            if (File.Exists(Path.Combine(cwd, "ClimateHub.sln")))
+                return cwd;
+            var parent = Directory.GetParent(cwd);
+            if (parent is null || parent.FullName == cwd) break;
+            cwd = parent.FullName;
+        }
+        throw new DirectoryNotFoundException($"Could not find solution dir. BaseDir={AppContext.BaseDirectory}, CWD={Directory.GetCurrentDirectory()}");
     }
 }
