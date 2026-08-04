@@ -9,6 +9,11 @@ on:
 jobs:
   mqtt-tests:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    services:
+      docker:
+        image: docker:dind
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -26,6 +31,11 @@ jobs:
 
   e2e-tests:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    services:
+      docker:
+        image: docker:dind
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -43,6 +53,11 @@ jobs:
 
   recovery-tests:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    services:
+      docker:
+        image: docker:dind
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
