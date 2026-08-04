@@ -63,7 +63,7 @@ try
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            options.RefreshOnIssuerSigningKeyNotFound = false;
+            options.MapInboundClaims = false;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
@@ -73,7 +73,8 @@ try
                 ValidIssuer = jwtSection.GetValue<string>("Issuer") ?? "ClimateHub",
                 ValidAudience = jwtSection.GetValue<string>("Audience") ?? "ClimateHub.Api",
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.Zero,
+                AuthenticationType = "Bearer"
             };
 
             options.Events = new JwtBearerEvents
