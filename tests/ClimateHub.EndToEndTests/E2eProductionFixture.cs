@@ -95,13 +95,8 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
-        Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Test");
-        builder.UseSetting("Environment", "Test");
-        builder.UseEnvironment("Test");
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            config.Sources.Clear();
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Postgres:ConnectionString"] = PostgresConnectionString,
