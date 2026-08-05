@@ -14,15 +14,6 @@ jobs:
         image: eclipse-mosquitto:2.0.20
         ports:
           - 1883:1883
-        options: >-
-          --health-cmd "timeout 5 mosquitto_sub -t test -C 1 || exit 1"
-          --health-interval 10s
-          --health-timeout 10s
-          --health-retries 5
-        command: >
-          sh -c "echo 'listener 1883
-          allow_anonymous true
-          persistence false' > /tmp/m.conf && mosquitto -c /tmp/m.conf"
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -34,100 +25,33 @@ jobs:
 
   e2e-tests:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
     services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: climate_hub_e2e
-          POSTGRES_USER: climate_hub
-          POSTGRES_PASSWORD: climate_hub_e2e
-          POSTGRES_HOST_AUTH_METHOD: password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-      mosquitto:
-        image: eclipse-mosquitto:2.0.20
-        ports:
-          - 1883:1883
-        command: >
-          sh -c "echo 'listener 1883
-          allow_anonymous true
-          persistence false' > /tmp/m.conf && mosquitto -c /tmp/m.conf"
-      influxdb:
-        image: influxdb:2.7.11-alpine
-        env:
-          DOCKER_INFLUXDB_INIT_MODE: setup
-          DOCKER_INFLUXDB_INIT_USERNAME: admin
-          DOCKER_INFLUXDB_INIT_PASSWORD: admin123456
-          DOCKER_INFLUXDB_INIT_ORG: climate-hub
-          DOCKER_INFLUXDB_INIT_BUCKET: climate-hub
-          DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: e2e-test-token-e2e
-        ports:
-          - 8086:8086
+      docker:
+        image: docker:dind
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Wait for dependencies
-        run: |
-          for i in $(seq 1 30); do
-            nc -z localhost 5432 && echo "Postgres ready" && break
-            sleep 2
-          done
-          for i in $(seq 1 30); do
-            nc -z localhost 1883 && echo "Mosquitto ready" && break
-            sleep 2
-          done
       - name: Build and Test
         run: dotnet test tests/ClimateHub.EndToEndTests --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx"
 
   recovery-tests:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
     services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: climate_hub_recovery
-          POSTGRES_USER: climate_hub
-          POSTGRES_PASSWORD: climate_hub_recovery
-          POSTGRES_HOST_AUTH_METHOD: password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-      mosquitto:
-        image: eclipse-mosquitto:2.0.20
-        ports:
-          - 1883:1883
-        command: >
-          sh -c "echo 'listener 1883
-          allow_anonymous true
-          persistence false' > /tmp/m.conf && mosquitto -c /tmp/m.conf"
+      docker:
+        image: docker:dind
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      - name: Wait for dependencies
-        run: |
-          for i in $(seq 1 30); do
-            nc -z localhost 5432 && echo "Postgres ready" && break
-            sleep 2
-          done
-          for i in $(seq 1 30); do
-            nc -z localhost 1883 && echo "Mosquitto ready" && break
-            sleep 2
-          done
       - name: Build and Test
         run: dotnet test tests/ClimateHub.RuntimeRecoveryTests --logger "trx;LogFileName=recovery.trx"
 
