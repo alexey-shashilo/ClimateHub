@@ -36,35 +36,6 @@ jobs:
 
   e2e-tests:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: climate_hub_e2e
-          POSTGRES_USER: climate_hub
-          POSTGRES_PASSWORD: climate_hub_e2e
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-      mosquitto:
-        image: eclipse-mosquitto:2.0.20
-        ports:
-          - 1883:1883
-      influxdb:
-        image: influxdb:2.7.11-alpine
-        env:
-          DOCKER_INFLUXDB_INIT_MODE: setup
-          DOCKER_INFLUXDB_INIT_USERNAME: admin
-          DOCKER_INFLUXDB_INIT_PASSWORD: admin123456
-          DOCKER_INFLUXDB_INIT_ORG: climate-hub
-          DOCKER_INFLUXDB_INIT_BUCKET: climate-hub
-          DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: e2e-test-token-e2e
-        ports:
-          - 8086:8086
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -76,24 +47,6 @@ jobs:
 
   recovery-tests:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: climate_hub_recovery
-          POSTGRES_USER: climate_hub
-          POSTGRES_PASSWORD: climate_hub_recovery
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-      mosquitto:
-        image: eclipse-mosquitto:2.0.20
-        ports:
-          - 1883:1883
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
