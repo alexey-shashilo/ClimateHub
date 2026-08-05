@@ -15,7 +15,6 @@ jobs:
         ports:
           - 1883:1883
         options: >-
-          --entrypoint ""
           --health-cmd "timeout 5 mosquitto_sub -t test -C 1 || exit 1"
           --health-interval 10s
           --health-timeout 10s
@@ -23,7 +22,7 @@ jobs:
         command: >
           sh -c "echo 'listener 1883
           allow_anonymous true
-          persistence false' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+          persistence false' > /tmp/m.conf && mosquitto -c /tmp/m.conf"
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -54,12 +53,10 @@ jobs:
         image: eclipse-mosquitto:2.0.20
         ports:
           - 1883:1883
-        options: >-
-          --entrypoint ""
         command: >
           sh -c "echo 'listener 1883
           allow_anonymous true
-          persistence false' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+          persistence false' > /tmp/m.conf && mosquitto -c /tmp/m.conf"
       influxdb:
         image: influxdb:2.7.11-alpine
         env:
@@ -111,12 +108,10 @@ jobs:
         image: eclipse-mosquitto:2.0.20
         ports:
           - 1883:1883
-        options: >-
-          --entrypoint ""
         command: >
           sh -c "echo 'listener 1883
           allow_anonymous true
-          persistence false' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+          persistence false' > /tmp/m.conf && mosquitto -c /tmp/m.conf"
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
