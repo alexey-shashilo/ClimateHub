@@ -1,52 +1,23 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 
 namespace ClimateHub.RuntimeRecoveryTests;
 
-[Collection("Docker")]
-public class RuntimeRestartRecoveryTests : IAsyncLifetime
+public class RuntimeRestartRecoveryTests
 {
-    private readonly IContainer _postgres;
-    private readonly IContainer _mqtt;
     private string _connectionString = "";
-    private int _mqttPort;
+    private int _mqttPort = 1883;
     private string _mqttHost = "localhost";
 
     public RuntimeRestartRecoveryTests()
     {
-        _postgres = new ContainerBuilder()
-            .WithImage("postgres:17-alpine").WithPortBinding(5432, true)
-            .WithEnvironment("POSTGRES_DB", "climate_hub_recovery")
-            .WithEnvironment("POSTGRES_USER", "climate_hub")
-            .WithEnvironment("POSTGRES_PASSWORD", "climate_hub_recovery")
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432)).Build();
-
-        _mqtt = new ContainerBuilder()
-            .WithImage("eclipse-mosquitto:2.0.20").WithPortBinding(1883, true)
-            .WithResourceMapping(
-                System.Text.Encoding.UTF8.GetBytes("listener 1883\nprotocol mqtt\nallow_anonymous true\npersistence false\nlog_dest stdout"),
-                "/mosquitto/config/mosquitto.conf")
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(1883)).Build();
-    }
-
-    public async Task InitializeAsync()
-    {
-        await _postgres.StartAsync();
-        await _mqtt.StartAsync();
-        _connectionString = $"Host=localhost;Port={_postgres.GetMappedPublicPort(5432)};Database=climate_hub_recovery;Username=climate_hub;Password=climate_hub_recovery;";
-        _mqttPort = _mqtt.GetMappedPublicPort(1883);
-        _mqttHost = "localhost";
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _mqtt.DisposeAsync();
-        await _postgres.DisposeAsync();
+        var pgPort = int.TryParse(Environment.GetEnvironmentVariable("RECOVERY_PG_PORT"), out var p) ? p : 5432;
+        var mqttPort = int.TryParse(Environment.GetEnvironmentVariable("RECOVERY_MQTT_PORT"), out var m) ? m : 1883;
+        _connectionString = $"Host=localhost;Port={pgPort};Database=climate_hub_recovery;Username=climate_hub;Password=climate_hub_recovery;";
+        _mqttPort = mqttPort;
     }
 
     // ─── Recovery Host Factory ───────────────────────────────
