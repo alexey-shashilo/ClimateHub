@@ -6,9 +6,14 @@ on:
   push:
     branches: [main, remediation/**]
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
 jobs:
   mqtt-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     services:
       mosquitto:
         image: eclipse-mosquitto:2.0.20
@@ -16,47 +21,91 @@ jobs:
           - 1883:1883
     steps:
       - uses: actions/checkout@v4
+      - name: Docker diagnostics
+        run: |
+          docker version
+          docker info --format '{{.Driver}} {{.ServerVersion}}'
+          docker ps
+          ls -la /var/run/docker.sock || echo "No docker.sock at expected path"
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
       - name: Build and Test
-        run: dotnet test tests/ClimateHub.MqttComponentTests --logger "trx;LogFileName=mqtt.trx"
+        run: dotnet test tests/ClimateHub.MqttComponentTests --logger "trx;LogFileName=mqtt.trx" -v n
+      - name: Upload TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mqtt-trx
+          path: '**/*.trx'
+          retention-days: 3
 
   e2e-tests:
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_HOST: unix:///var/run/docker.sock
-    services:
-      docker:
-        image: docker:dind
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Docker diagnostics
+        run: |
+          docker version
+          docker info --format '{{.Driver}} {{.ServerVersion}}'
+          docker ps
+          ls -la /var/run/docker.sock
+          echo "TC_NET_VERSION=$(dotnet list package --include-transitive | grep -i testcontainers | head -1)" >> $GITHUB_ENV
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
       - name: Build and Test
-        run: dotnet test tests/ClimateHub.EndToEndTests --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx"
+        run: dotnet test tests/ClimateHub.EndToEndTests --filter "Category=E2E" --logger "trx;LogFileName=e2e.trx" -v n
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: ""  # keep default (Ryuk enabled)
+      - name: Upload TRX + diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            **/*.trx
+            **/Testcontainers*.log
+            **/docker*.log
+          retention-days: 3
 
   recovery-tests:
-    runs-on: ubuntu-latest
-    env:
-      DOCKER_HOST: unix:///var/run/docker.sock
-    services:
-      docker:
-        image: docker:dind
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Docker diagnostics
+        run: |
+          docker version
+          docker info --format '{{.Driver}} {{.ServerVersion}}'
+          docker ps
+          ls -la /var/run/docker.sock
+          echo "TC_NET_VERSION=$(dotnet list package --include-transitive | grep -i testcontainers | head -1)" >> $GITHUB_ENV
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
       - name: Build and Test
-        run: dotnet test tests/ClimateHub.RuntimeRecoveryTests --logger "trx;LogFileName=recovery.trx"
+        run: dotnet test tests/ClimateHub.RuntimeRecoveryTests --logger "trx;LogFileName=recovery.trx" -v n
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: ""
+      - name: Upload TRX + diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-artifacts
+          path: |
+            **/*.trx
+            **/Testcontainers*.log
+            **/docker*.log
+          retention-days: 3
 
   deployment-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -64,24 +113,35 @@ jobs:
         with:
           dotnet-version: 9.0.x
       - name: Build and Test (Backup/Restore)
-        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~BackupRestoreTests" --logger "trx;LogFileName=backup.trx"
+        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~BackupRestoreTests" --logger "trx;LogFileName=backup.trx" -v n
       - name: Build and Test (Full Stack)
-        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~DeploymentVerificationTests&!Category=Deployment" --logger "trx;LogFileName=deploy-full.trx"
+        run: dotnet test tests/ClimateHub.DeploymentVerificationTests --filter "FullyQualifiedName~DeploymentVerificationTests&!Category=Deployment" --logger "trx;LogFileName=deploy-full.trx" -v n
+      - name: Upload TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-artifacts
+          path: '**/*.trx'
+          retention-days: 3
 
-  required-checks-complete:
-    runs-on: ubuntu-latest
+  required-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     needs: [mqtt-tests, e2e-tests, recovery-tests, deployment-tests]
     if: always()
     steps:
-      - name: Check Build Status
+      - name: Gate — all jobs must succeed
         run: |
-          echo "MQTT: ${{ needs.mqtt-tests.result }} | E2E: ${{ needs.e2e-tests.result }} | Recovery: ${{ needs.recovery-tests.result }} | Deploy: ${{ needs.deployment-tests.result }}"
-          if [ "${{ needs.mqtt-tests.result }}" = "success" ] && \
-             [ "${{ needs.e2e-tests.result }}" = "success" ] && \
-             [ "${{ needs.recovery-tests.result }}" = "success" ] && \
+          echo "MQTT:       ${{ needs.mqtt-tests.result }}"
+          echo "E2E:        ${{ needs.e2e-tests.result }}"
+          echo "Recovery:   ${{ needs.recovery-tests.result }}"
+          echo "Deployment: ${{ needs.deployment-tests.result }}"
+          if [ "${{ needs.mqtt-tests.result }}"      = "success" ] && \
+             [ "${{ needs.e2e-tests.result }}"        = "success" ] && \
+             [ "${{ needs.recovery-tests.result }}"   = "success" ] && \
              [ "${{ needs.deployment-tests.result }}" = "success" ]; then
-            echo "All integration checks passed"
+            echo "✓ All integration checks passed"
           else
-            echo "Some checks failed"
+            echo "✗ Some checks failed — PR blocked"
             exit 1
           fi
