@@ -11,6 +11,11 @@ topic read climate-hub/v1/+/+/status/+
 topic write climate-hub/v1/+/+/command/execute
 topic write climate-hub/v1/+/+/command/cancel
 
+# Health-check monitor account — read-only access to broker $SYS status topics so the
+# compose healthcheck can verify the broker is actually accepting authenticated clients.
+user climate-hub-healthcheck
+topic read $SYS/broker/uptime
+
 # Per-device credentials — device ID is used as MQTT username
 # Each device can only write to its own telemetry path
 # Pattern: climate-hub/v1/{buildingId}/{deviceId}/telemetry/#
