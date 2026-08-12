@@ -6,17 +6,26 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
 {
-    public partial class AddNeedClosedLoopFields : Migration
+    /// <inheritdoc />
+    public partial class AddNeedClosedLoopAndEvaluationState : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Add new fields to needs table
-            migrationBuilder.AddColumn<DateTimeOffset>(
-                name: "ViolationSince",
+            migrationBuilder.AddColumn<string>(
+                name: "ActiveCommandPlanId",
                 schema: "needs",
                 table: "needs",
-                type: "timestamp with time zone",
+                type: "text",
                 nullable: true);
+
+            migrationBuilder.AddColumn<int>(
+                name: "CommandAttemptCount",
+                schema: "needs",
+                table: "needs",
+                type: "integer",
+                nullable: false,
+                defaultValue: 0);
 
             migrationBuilder.AddColumn<DateTimeOffset>(
                 name: "EffectEvaluationDueAt",
@@ -30,6 +39,13 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                 schema: "needs",
                 table: "needs",
                 type: "timestamp with time zone",
+                nullable: true);
+
+            migrationBuilder.AddColumn<Guid>(
+                name: "LastCommandId",
+                schema: "needs",
+                table: "needs",
+                type: "uuid",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTimeOffset>(
@@ -47,22 +63,27 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: 0);
 
-            migrationBuilder.AddColumn<int>(
-                name: "CommandAttemptCount",
+            migrationBuilder.AddColumn<string>(
+                name: "SelectedEngineeringCapabilityCode",
                 schema: "needs",
                 table: "needs",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
-
-            migrationBuilder.AddColumn<Guid>(
-                name: "LastCommandId",
-                schema: "needs",
-                table: "needs",
-                type: "uuid",
+                type: "text",
                 nullable: true);
 
-            // Create need_evaluations table
+            migrationBuilder.AddColumn<string>(
+                name: "SelectedEngineeringSystemId",
+                schema: "needs",
+                table: "needs",
+                type: "text",
+                nullable: true);
+
+            migrationBuilder.AddColumn<DateTimeOffset>(
+                name: "ViolationSince",
+                schema: "needs",
+                table: "needs",
+                type: "timestamp with time zone",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "need_evaluations",
                 schema: "needs",
@@ -74,13 +95,13 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                     BuildingId = table.Column<Guid>(type: "uuid", nullable: false),
                     RoomId = table.Column<Guid>(type: "uuid", nullable: false),
                     Trigger = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    EnvironmentSnapshotJson = table.Column<string>(type: "jsonb", nullable: true),
-                    PolicySnapshotJson = table.Column<string>(type: "jsonb", nullable: true),
+                    EnvironmentSnapshotJson = table.Column<string>(type: "text", nullable: true),
+                    PolicySnapshotJson = table.Column<string>(type: "text", nullable: true),
                     PreviousStatus = table.Column<string>(type: "text", nullable: true),
                     NewStatus = table.Column<string>(type: "text", nullable: true),
-                    CalculationResultJson = table.Column<string>(type: "jsonb", nullable: true),
-                    CapabilityPlanJson = table.Column<string>(type: "jsonb", nullable: true),
-                    DeviceResolutionResultJson = table.Column<string>(type: "jsonb", nullable: true),
+                    CalculationResultJson = table.Column<string>(type: "text", nullable: true),
+                    CapabilityPlanJson = table.Column<string>(type: "text", nullable: true),
+                    DeviceResolutionResultJson = table.Column<string>(type: "text", nullable: true),
                     CommandId = table.Column<Guid>(type: "uuid", nullable: true),
                     Outcome = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     FailureCode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
@@ -93,35 +114,52 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                     table.PrimaryKey("PK_need_evaluations", x => x.Id);
                 });
 
-            // Create indexes for need_evaluations
-            migrationBuilder.CreateIndex(
-                name: "IX_need_evaluations_NeedId",
+            migrationBuilder.CreateTable(
+                name: "room_parameter_evaluation_states",
                 schema: "needs",
-                table: "need_evaluations",
-                column: "NeedId");
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BuildingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoomId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ParameterCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    PolicyVersion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ViolationDirection = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
+                    ViolationSince = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LastValue = table.Column<double>(type: "double precision", nullable: true),
+                    LastMeasuredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LastQuality = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    LastEvaluationAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Version = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_room_parameter_evaluation_states", x => x.Id);
+                });
 
             migrationBuilder.CreateIndex(
-                name: "IX_need_evaluations_EvaluatedAt",
+                name: "IX_needs_ActiveCommandId",
                 schema: "needs",
-                table: "need_evaluations",
-                column: "EvaluatedAt");
+                table: "needs",
+                column: "ActiveCommandId");
 
-            // Drop old index and create new ones for needs
-            migrationBuilder.DropIndex(
-                name: "IX_needs_RoomId_Status",
-                schema: "needs",
-                table: "needs");
-
-            // Partial unique index for active needs by RoomId + Type
             migrationBuilder.CreateIndex(
-                name: "IX_needs_RoomId_Type_Active",
+                name: "IX_needs_BuildingId_Status",
+                schema: "needs",
+                table: "needs",
+                columns: new[] { "BuildingId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_needs_RoomId_Type",
                 schema: "needs",
                 table: "needs",
                 columns: new[] { "RoomId", "Type" },
-                filter: "Status IN ('Detected', 'Planning', 'Planned', 'Executing', 'WaitingForEffect', 'Blocked')",
-                unique: true);
+                unique: true,
+                filter: "\"Status\" IN ('Detected', 'Planning', 'Planned', 'Executing', 'WaitingForEffect', 'Blocked')");
 
-            // Performance indexes
             migrationBuilder.CreateIndex(
                 name: "IX_needs_Status_CooldownUntil",
                 schema: "needs",
@@ -141,32 +179,60 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                 columns: new[] { "Status", "LastEvaluationAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_needs_ActiveCommandId",
+                name: "IX_need_evaluations_EvaluatedAt",
                 schema: "needs",
-                table: "needs",
-                column: "ActiveCommandId");
+                table: "need_evaluations",
+                column: "EvaluatedAt");
 
             migrationBuilder.CreateIndex(
-                name: "IX_needs_RoomId_Status",
+                name: "IX_need_evaluations_NeedId",
                 schema: "needs",
-                table: "needs",
-                columns: new[] { "RoomId", "Status" });
+                table: "need_evaluations",
+                column: "NeedId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_needs_BuildingId_Status",
+                name: "IX_room_parameter_evaluation_states_LastEvaluationAt",
                 schema: "needs",
-                table: "needs",
-                columns: new[] { "BuildingId", "Status" });
+                table: "room_parameter_evaluation_states",
+                column: "LastEvaluationAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_room_parameter_evaluation_states_RoomId_ParameterCode",
+                schema: "needs",
+                table: "room_parameter_evaluation_states",
+                columns: new[] { "RoomId", "ParameterCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_room_parameter_evaluation_states_ViolationSince",
+                schema: "needs",
+                table: "room_parameter_evaluation_states",
+                column: "ViolationSince");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
                 name: "need_evaluations",
                 schema: "needs");
 
+            migrationBuilder.DropTable(
+                name: "room_parameter_evaluation_states",
+                schema: "needs");
+
             migrationBuilder.DropIndex(
-                name: "IX_needs_RoomId_Type_Active",
+                name: "IX_needs_ActiveCommandId",
+                schema: "needs",
+                table: "needs");
+
+            migrationBuilder.DropIndex(
+                name: "IX_needs_BuildingId_Status",
+                schema: "needs",
+                table: "needs");
+
+            migrationBuilder.DropIndex(
+                name: "IX_needs_RoomId_Type",
                 schema: "needs",
                 table: "needs");
 
@@ -185,18 +251,13 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                 schema: "needs",
                 table: "needs");
 
-            migrationBuilder.DropIndex(
-                name: "IX_needs_ActiveCommandId",
-                schema: "needs",
-                table: "needs");
-
-            migrationBuilder.DropIndex(
-                name: "IX_needs_BuildingId_Status",
+            migrationBuilder.DropColumn(
+                name: "ActiveCommandPlanId",
                 schema: "needs",
                 table: "needs");
 
             migrationBuilder.DropColumn(
-                name: "ViolationSince",
+                name: "CommandAttemptCount",
                 schema: "needs",
                 table: "needs");
 
@@ -211,6 +272,11 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                 table: "needs");
 
             migrationBuilder.DropColumn(
+                name: "LastCommandId",
+                schema: "needs",
+                table: "needs");
+
+            migrationBuilder.DropColumn(
                 name: "LastMeaningfulImprovementAt",
                 schema: "needs",
                 table: "needs");
@@ -221,20 +287,19 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                 table: "needs");
 
             migrationBuilder.DropColumn(
-                name: "CommandAttemptCount",
+                name: "SelectedEngineeringCapabilityCode",
                 schema: "needs",
                 table: "needs");
 
             migrationBuilder.DropColumn(
-                name: "LastCommandId",
+                name: "SelectedEngineeringSystemId",
                 schema: "needs",
                 table: "needs");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_needs_RoomId_Status",
+            migrationBuilder.DropColumn(
+                name: "ViolationSince",
                 schema: "needs",
-                table: "needs",
-                columns: new[] { "RoomId", "Status" });
+                table: "needs");
         }
     }
 }

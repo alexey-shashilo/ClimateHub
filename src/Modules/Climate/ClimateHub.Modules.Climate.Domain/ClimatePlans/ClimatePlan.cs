@@ -237,7 +237,7 @@ public class ClimatePlan : Entity<ClimatePlanId>, IAggregateRoot
 public class EngineeringSubPlan
 {
     public Guid Id { get; private set; }
-    public Guid ClimatePlanId { get; set; }
+    public ClimatePlanId ClimatePlanId { get; set; }
     public string EngineeringCapabilityCode { get; private set; } = string.Empty;
     public double RequestedEffect { get; private set; }
     public string PriorityCategory { get; private set; } = "Medium";
@@ -290,7 +290,7 @@ public class EngineeringSubPlan
 public class ClimatePlanDependency
 {
     public Guid Id { get; private set; }
-    public Guid ClimatePlanId { get; set; }
+    public ClimatePlanId ClimatePlanId { get; set; }
     public Guid PredecessorSubPlanId { get; private set; }
     public Guid SuccessorSubPlanId { get; private set; }
     public DependencyType Type { get; private set; }
@@ -312,7 +312,7 @@ public class ClimatePlanDependency
 public class ClimateConflict
 {
     public Guid Id { get; private set; }
-    public Guid ClimatePlanId { get; set; }
+    public ClimatePlanId ClimatePlanId { get; set; }
     public ConflictType ConflictType { get; private set; }
     public string FirstCapabilityCode { get; private set; } = string.Empty;
     public string SecondCapabilityCode { get; private set; } = string.Empty;
@@ -329,7 +329,7 @@ public class ClimateConflict
         string winnerCapability, string loserCapability,
         string resolution, string? reason = null)
     {
-        Id = Guid.NewGuid(); ClimatePlanId = climatePlanId;
+        Id = Guid.NewGuid(); ClimatePlanId = ClimatePlanId.From(climatePlanId);
         ConflictType = conflictType;
         FirstCapabilityCode = firstCapability;
         SecondCapabilityCode = secondCapability;
@@ -344,7 +344,7 @@ public class ClimateResourceReservation
 {
     public Guid Id { get; private set; }
     public Guid ClimateResourceId { get; private set; }
-    public Guid ClimatePlanId { get; set; }
+    public ClimatePlanId ClimatePlanId { get; set; }
     public Guid? EngineeringSubPlanId { get; private set; }
     public double RequestedAmount { get; private set; }
     public double ReservedAmount { get; private set; }
@@ -361,7 +361,7 @@ public class ClimateResourceReservation
         Guid? engineeringSubPlanId, double requestedAmount, DateTimeOffset? expiresAt = null)
     {
         Id = Guid.NewGuid(); ClimateResourceId = climateResourceId;
-        ClimatePlanId = climatePlanId; EngineeringSubPlanId = engineeringSubPlanId;
+        ClimatePlanId = ClimatePlanId.From(climatePlanId); EngineeringSubPlanId = engineeringSubPlanId;
         RequestedAmount = requestedAmount; Status = "Requested";
         RequestedAt = DateTimeOffset.UtcNow; ExpiresAt = expiresAt; Version = 1;
     }

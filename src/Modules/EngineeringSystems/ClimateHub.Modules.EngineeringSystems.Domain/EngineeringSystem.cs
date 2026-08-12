@@ -332,7 +332,7 @@ public class EngineeringSystem : Entity<EngineeringSystemId>, IAggregateRoot
 public class SystemCapability
 {
     public Guid Id { get; private set; }
-    public Guid EngineeringSystemId { get; set; }
+    public EngineeringSystemId EngineeringSystemId { get; set; }
     public string Code { get; private set; } = string.Empty;
     public string? DataType { get; private set; }
     public string? Unit { get; private set; }
@@ -357,7 +357,7 @@ public class SystemCapability
 public class EngineeringResource
 {
     public Guid Id { get; private set; }
-    public Guid EngineeringSystemId { get; set; }
+    public EngineeringSystemId EngineeringSystemId { get; set; }
     public string Code { get; private set; } = string.Empty;
     public string? Unit { get; private set; }
     public double Maximum { get; private set; }

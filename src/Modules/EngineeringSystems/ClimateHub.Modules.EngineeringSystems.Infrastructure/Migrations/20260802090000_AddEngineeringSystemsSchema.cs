@@ -1,4 +1,6 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -6,6 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace ClimateHub.Modules.EngineeringSystems.Infrastructure.Migrations
 {
+    [DbContext(typeof(ClimateHub.Modules.EngineeringSystems.Infrastructure.EngineeringSystemsDbContext))]
+    [Migration("20260802090000_AddEngineeringSystemsSchema")]
     public partial class AddEngineeringSystemsSchema : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

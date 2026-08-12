@@ -12,7 +12,7 @@ public enum VentilationSystemMode
 public class VentilationSystemConfiguration
 {
     public Guid Id { get; private set; }
-    public Guid EngineeringSystemId { get; private set; }
+    public EngineeringSystemId EngineeringSystemId { get; private set; }
     public VentilationSystemMode SystemMode { get; private set; }
     public double DesignSupplyAirflow { get; private set; }
     public double DesignExhaustAirflow { get; private set; }
@@ -33,17 +33,17 @@ public class VentilationSystemConfiguration
     private VentilationSystemConfiguration() { SystemMode = VentilationSystemMode.BalancedSupplyExhaust; }
 
     public VentilationSystemConfiguration(Guid engineeringSystemId,
-        VentilationSystemMode systemMode = VentilationSystemMode.BalancedSupplyExhaust,
-        double designSupplyAirflow = 300, double designExhaustAirflow = 300,
-        double minimumSupplyAirflow = 30, double minimumExhaustAirflow = 30,
-        double maximumImbalancePct = 10,
-        bool hasHeatRecovery = true, bool hasSupplyHeater = true,
-        bool hasSupplyAirTempSensor = true, bool hasOutdoorTempSensor = true,
-        bool frostProtectionEnabled = true, double frostProtectionTemperature = -15,
-        double minSupplyAirTemp = 16, double maxSupplyAirTemp = 35,
-        double defaultHeatRecoveryEfficiency = 0.75)
+            VentilationSystemMode systemMode = VentilationSystemMode.BalancedSupplyExhaust,
+            double designSupplyAirflow = 300, double designExhaustAirflow = 300,
+            double minimumSupplyAirflow = 30, double minimumExhaustAirflow = 30,
+            double maximumImbalancePct = 10,
+            bool hasHeatRecovery = true, bool hasSupplyHeater = true,
+            bool hasSupplyAirTempSensor = true, bool hasOutdoorTempSensor = true,
+            bool frostProtectionEnabled = true, double frostProtectionTemperature = -15,
+            double minSupplyAirTemp = 16, double maxSupplyAirTemp = 35,
+            double defaultHeatRecoveryEfficiency = 0.75)
     {
-        Id = Guid.NewGuid(); EngineeringSystemId = engineeringSystemId;
+        Id = Guid.NewGuid(); EngineeringSystemId = EngineeringSystemId.From(engineeringSystemId);
         SystemMode = systemMode; DesignSupplyAirflow = designSupplyAirflow;
         DesignExhaustAirflow = designExhaustAirflow;
         MinimumSupplyAirflow = minimumSupplyAirflow;

@@ -1,5 +1,4 @@
 using System.Net.Sockets;
-using System.Text;
 using ClimateHub.Api;
 using ClimateHub.Api.Middleware;
 using ClimateHub.Infrastructure.Configuration;
@@ -42,10 +41,6 @@ try
     var postgresConnectionString = builder.Configuration.GetRequiredSection("Postgres:ConnectionString").Value
         ?? throw new InvalidOperationException("Postgres:ConnectionString is required");
 
-    var jwtSection = builder.Configuration.GetSection("Jwt");
-    var jwtSigningKey = jwtSection.GetValue<string>("SigningKey")
-        ?? throw new InvalidOperationException("Jwt:SigningKey is required");
-
     builder.Services.AddCors();
     builder.Services.AddClimateHubInfrastructure();
     builder.Services.AddInternalEventInfrastructure(postgresConnectionString);
@@ -60,19 +55,39 @@ try
     builder.Services.AddIamModule(postgresConnectionString);
     builder.Services.AddAuditInfrastructure(postgresConnectionString);
 
+    builder.Services.ConfigureHttpJsonOptions(options =>
+    {
+        options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
+    builder.Services.AddHostedService<ClimateHub.Api.InternalEventSubscriptionRegistrar>();
+
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
+        .AddJwtBearer();
+
+    builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+        .Configure<Microsoft.Extensions.Configuration.IConfiguration>((options, configuration) =>
         {
             options.MapInboundClaims = false;
+
+            var jwtCfg = configuration.GetSection("Jwt");
+            var signingKey = jwtCfg.GetValue<string>("SigningKey")
+                ?? throw new InvalidOperationException("Jwt:SigningKey is required");
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSection.GetValue<string>("Issuer") ?? "ClimateHub",
-                ValidAudience = jwtSection.GetValue<string>("Audience") ?? "ClimateHub.Api",
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+                ValidIssuer = jwtCfg.GetValue<string>("Issuer") ?? "ClimateHub",
+                ValidAudience = jwtCfg.GetValue<string>("Audience") ?? "ClimateHub.Api",
+                IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+                {
+                    var key = ClimateHub.Modules.IAM.Domain.JwtSecurityKeys.Create(signingKey);
+                    key.KeyId = kid;
+                    return new[] { key };
+                },
                 ClockSkew = TimeSpan.Zero,
                 AuthenticationType = "Bearer"
             };

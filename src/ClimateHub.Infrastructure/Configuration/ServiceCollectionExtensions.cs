@@ -38,7 +38,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<InternalEventInboxRepository>();
         services.AddScoped<SseEventLogRepository>();
         services.AddScoped<RoomEvaluationLock>();
-        services.AddScoped<InternalEventDispatcher>();
+        services.AddScoped<InternalEventOutboxRepository>();
+        services.AddScoped<InternalEventInboxRepository>();
+        services.AddScoped<SseEventLogRepository>();
+        services.AddSingleton<InternalEventDispatcher>();
 
         services.AddOptions<InternalEventsOptions>()
             .BindConfiguration(InternalEventsOptions.SectionName)

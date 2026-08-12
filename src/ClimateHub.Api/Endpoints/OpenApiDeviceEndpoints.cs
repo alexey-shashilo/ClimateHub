@@ -42,12 +42,26 @@ public static class OpenApiDeviceEndpoints
             if (!Guid.TryParse(deviceId, out var guid)) return Results.Problem(statusCode: 404, detail: "DEVICE_NOT_FOUND");
             var request = await ctx.Request.ReadFromJsonAsync<OpenApiAssignRequest>(cancellationToken: ct);
             if (request is null || string.IsNullOrWhiteSpace(request.RoomId)) return Results.Problem(statusCode: 400, detail: "VALIDATION_ERROR");
-            var handler = ctx.RequestServices.GetRequiredService<AssignDeviceHandler>();
             if (!Guid.TryParse(request.RoomId, out var roomGuid)) return Results.Problem(statusCode: 400, detail: "VALIDATION_ERROR");
+
+            var roomRepo = ctx.RequestServices.GetRequiredService<ClimateHub.Modules.Building.Domain.Repositories.IRoomRepository>();
+            var room = await roomRepo.GetByIdAsync(SharedKernel.Primitives.RoomId.From(roomGuid), ct);
+            if (room is null) return Results.Problem(statusCode: 404, detail: "ROOM_NOT_FOUND");
+
+            var userIdClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Results.Problem(statusCode: 401, detail: "Not authenticated");
+
+            var grantRepo = ctx.RequestServices.GetRequiredService<ClimateHub.Modules.IAM.Domain.IBuildingAccessGrantRepository>();
+            var hasAccess = await grantRepo.HasAccessAsync(userId, room.BuildingId.Value, ct);
+            if (!hasAccess)
+                return Results.Problem(statusCode: 403, detail: "Access denied to this building");
+
+            var handler = ctx.RequestServices.GetRequiredService<AssignDeviceHandler>();
             var cmd = new AssignDeviceCommand { DeviceId = DeviceId.From(guid), RoomId = SharedKernel.Primitives.RoomId.From(roomGuid) };
             var result = await handler.HandleAsync(cmd, ct);
             return Results.Ok(result);
-        }).RequireDeviceAccess().RequirePermission("device_configure");
+        }).RequirePermission("device_configure");
 
         dg.MapPut("/{deviceId}", async (string deviceId, HttpContext ctx, CancellationToken ct) =>
         {

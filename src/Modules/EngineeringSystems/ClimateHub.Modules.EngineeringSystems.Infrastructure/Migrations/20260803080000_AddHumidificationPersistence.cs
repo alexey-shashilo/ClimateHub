@@ -1,10 +1,14 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace ClimateHub.Modules.EngineeringSystems.Infrastructure.Migrations
 {
+    [DbContext(typeof(ClimateHub.Modules.EngineeringSystems.Infrastructure.EngineeringSystemsDbContext))]
+    [Migration("20260803080000_AddHumidificationPersistence")]
     public partial class AddHumidificationPersistence : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
