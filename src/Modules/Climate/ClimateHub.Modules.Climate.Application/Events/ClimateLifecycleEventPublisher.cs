@@ -24,7 +24,9 @@ public class ClimateLifecycleEventPublisher
             goal.BuildingId.Value, goal.RoomId.Value,
             new
             {
-                goal.Id, goal.RoomId, Status = goal.Status.ToString(),
+                goal.Id,
+                goal.RoomId,
+                Status = goal.Status.ToString(),
                 Profile = goal.ActiveProfile.ToString(),
                 SatisfactionPct = goal.SatisfactionPct,
                 ActiveClimatePlanId = goal.ActiveClimatePlanId?.ToString()
@@ -40,10 +42,14 @@ public class ClimateLifecycleEventPublisher
             plan.BuildingId.Value, plan.RoomId.Value,
             new
             {
-                plan.Id, plan.GoalId, Status = plan.Status.ToString(),
-                plan.ActiveProfile, SubPlanCount = plan.SubPlans.Count,
+                plan.Id,
+                plan.GoalId,
+                Status = plan.Status.ToString(),
+                plan.ActiveProfile,
+                SubPlanCount = plan.SubPlans.Count,
                 ConflictCount = plan.ResolvedConflicts.Count,
-                plan.FailureCode, plan.FailureReason
+                plan.FailureCode,
+                plan.FailureReason
             },
             null, correlationId, causationId, null, ct);
         _logger.LogDebug("Published {EventType} for plan {PlanId}", eventType, plan.Id);
@@ -56,9 +62,12 @@ public class ClimateLifecycleEventPublisher
             buildingId, roomId,
             new
             {
-                subPlan.Id, subPlan.ClimatePlanId,
-                subPlan.EngineeringCapabilityCode, Status = subPlan.Status.ToString(),
-                subPlan.EngineeringCommandPlanId, subPlan.FailureCode
+                subPlan.Id,
+                subPlan.ClimatePlanId,
+                subPlan.EngineeringCapabilityCode,
+                Status = subPlan.Status.ToString(),
+                subPlan.EngineeringCommandPlanId,
+                subPlan.FailureCode
             },
             null, correlationId, causationId, null, ct);
     }
@@ -70,10 +79,14 @@ public class ClimateLifecycleEventPublisher
             buildingId, roomId,
             new
             {
-                conflict.Id, conflict.ClimatePlanId,
-                conflict.ConflictType, conflict.FirstCapabilityCode,
-                conflict.SecondCapabilityCode, conflict.WinnerCapabilityCode,
-                conflict.LoserCapabilityCode, conflict.Resolution
+                conflict.Id,
+                conflict.ClimatePlanId,
+                conflict.ConflictType,
+                conflict.FirstCapabilityCode,
+                conflict.SecondCapabilityCode,
+                conflict.WinnerCapabilityCode,
+                conflict.LoserCapabilityCode,
+                conflict.Resolution
             },
             null, correlationId, causationId, null, ct);
     }
@@ -85,9 +98,12 @@ public class ClimateLifecycleEventPublisher
             buildingId, roomId,
             new
             {
-                reservation.Id, reservation.ClimateResourceId,
-                reservation.ClimatePlanId, reservation.RequestedAmount,
-                reservation.ReservedAmount, reservation.Status
+                reservation.Id,
+                reservation.ClimateResourceId,
+                reservation.ClimatePlanId,
+                reservation.RequestedAmount,
+                reservation.ReservedAmount,
+                reservation.Status
             },
             null, null, null, null, ct);
     }

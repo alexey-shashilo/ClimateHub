@@ -146,8 +146,11 @@ public class NeedEvaluationService
                 var eventId = await PublishNeedEventAsync("need.satisfied", existingNeed, correlationId, causationId, ct);
                 _eventBus.Publish(new EnvironmentUpdatedEvent
                 {
-                    RoomId = roomId, Timestamp = now, EventType = "need.satisfied",
-                    CorrelationId = correlationId, CausationId = causationId,
+                    RoomId = roomId,
+                    Timestamp = now,
+                    EventType = "need.satisfied",
+                    CorrelationId = correlationId,
+                    CausationId = causationId,
                     PayloadJson = JsonSerializer.Serialize(new { eventId = eventId.ToString() })
                 });
                 return;
@@ -156,8 +159,11 @@ public class NeedEvaluationService
             await _needRepo.UpdateAsync(existingNeed, ct);
             _eventBus.Publish(new EnvironmentUpdatedEvent
             {
-                RoomId = roomId, Timestamp = now, EventType = "need.updated",
-                CorrelationId = correlationId, CausationId = causationId
+                RoomId = roomId,
+                Timestamp = now,
+                EventType = "need.updated",
+                CorrelationId = correlationId,
+                CausationId = causationId
             });
             return;
         }
@@ -168,8 +174,11 @@ public class NeedEvaluationService
             await _needRepo.UpdateAsync(existingNeed, ct);
             _eventBus.Publish(new EnvironmentUpdatedEvent
             {
-                RoomId = roomId, Timestamp = now, EventType = "need.updated",
-                CorrelationId = correlationId, CausationId = causationId
+                RoomId = roomId,
+                Timestamp = now,
+                EventType = "need.updated",
+                CorrelationId = correlationId,
+                CausationId = causationId
             });
         }
     }
@@ -254,8 +263,11 @@ public class NeedEvaluationService
                     var eventId = await PublishNeedEventAsync("need.satisfied", need, correlationId, causationId, ct);
                     _eventBus.Publish(new EnvironmentUpdatedEvent
                     {
-                        RoomId = need.RoomId, Timestamp = now, EventType = "need.satisfied",
-                        CorrelationId = correlationId, CausationId = causationId,
+                        RoomId = need.RoomId,
+                        Timestamp = now,
+                        EventType = "need.satisfied",
+                        CorrelationId = correlationId,
+                        CausationId = causationId,
                         PayloadJson = JsonSerializer.Serialize(new { eventId = eventId.ToString() })
                     });
                     return;
@@ -323,8 +335,11 @@ public class NeedEvaluationService
         var eventId = await PublishNeedEventAsync("need.detected", need, correlationId, causationId, ct);
         _eventBus.Publish(new EnvironmentUpdatedEvent
         {
-            RoomId = roomId, Timestamp = now, EventType = "need.detected",
-            CorrelationId = correlationId, CausationId = causationId,
+            RoomId = roomId,
+            Timestamp = now,
+            EventType = "need.detected",
+            CorrelationId = correlationId,
+            CausationId = causationId,
             PayloadJson = JsonSerializer.Serialize(new { eventId = eventId.ToString() })
         });
 
@@ -593,13 +608,13 @@ public class NeedEvaluationService
 
     private static (NeedType? type, NeedSeverity severity, double deviation, double min, double max, double pref) ComputeFromContract(
         string parameter, double current, RoomPolicyDto? policy) => parameter switch
-    {
-        "temperature" => ComputeTemperature(current, policy),
-        "humidity" => ComputeHumidity(current, policy),
-        "co2" => ComputeCo2(current, policy),
-        "illuminance" => ComputeIlluminance(current, policy),
-        _ => (null, NeedSeverity.Low, 0.0, 0.0, 0.0, 0.0)
-    };
+        {
+            "temperature" => ComputeTemperature(current, policy),
+            "humidity" => ComputeHumidity(current, policy),
+            "co2" => ComputeCo2(current, policy),
+            "illuminance" => ComputeIlluminance(current, policy),
+            _ => (null, NeedSeverity.Low, 0.0, 0.0, 0.0, 0.0)
+        };
 
     private static (NeedType? type, NeedSeverity severity, double deviation, double min, double max, double pref) ComputeTemperature(
         double current, RoomPolicyDto? p)

@@ -35,7 +35,10 @@ public class StandardEngineeringPlanningService : IStandardEngineeringPlanningSe
         var currentValue = co2Param?.Value ?? request.CurrentValue ?? 400;
         var deviation = request.Severity switch
         {
-            "Critical" => 1000, "High" => 500, "Medium" => 200, _ => 100
+            "Critical" => 1000,
+            "High" => 500,
+            "Medium" => 200,
+            _ => 100
         };
 
         var strategyResult = await _strategyEngine.PlanAsync(

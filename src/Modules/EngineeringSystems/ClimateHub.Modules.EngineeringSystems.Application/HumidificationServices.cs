@@ -25,7 +25,8 @@ public class CondensationProtectionPlanner
         if (!config.CondensationProtectionEnabled)
             return new CondensationProtectionResult
             {
-                DewPointC = 0, Risk = CondensationRisk.None,
+                DewPointC = 0,
+                Risk = CondensationRisk.None,
                 BlockHumidification = false,
                 Description = "Condensation protection disabled"
             };

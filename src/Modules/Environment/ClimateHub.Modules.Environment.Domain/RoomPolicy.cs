@@ -40,10 +40,22 @@ public class RoomPolicy
         return new RoomPolicy
         {
             Id = roomId,
-            TemperatureMin = tMin, TemperatureMax = tMax, TemperaturePreferred = tPref, TemperatureMode = tMode ?? PolicyControlMode.MonitorOnly,
-            HumidityMin = hMin, HumidityMax = hMax, HumidityPreferred = hPref, HumidityMode = hMode ?? PolicyControlMode.MonitorOnly,
-            Co2Min = cMin, Co2Max = cMax, Co2Preferred = cPref, Co2Mode = cMode ?? PolicyControlMode.MonitorOnly,
-            IlluminanceMin = iMin, IlluminanceMax = iMax, IlluminancePreferred = iPref, IlluminanceMode = iMode ?? PolicyControlMode.MonitorOnly,
+            TemperatureMin = tMin,
+            TemperatureMax = tMax,
+            TemperaturePreferred = tPref,
+            TemperatureMode = tMode ?? PolicyControlMode.MonitorOnly,
+            HumidityMin = hMin,
+            HumidityMax = hMax,
+            HumidityPreferred = hPref,
+            HumidityMode = hMode ?? PolicyControlMode.MonitorOnly,
+            Co2Min = cMin,
+            Co2Max = cMax,
+            Co2Preferred = cPref,
+            Co2Mode = cMode ?? PolicyControlMode.MonitorOnly,
+            IlluminanceMin = iMin,
+            IlluminanceMax = iMax,
+            IlluminancePreferred = iPref,
+            IlluminanceMode = iMode ?? PolicyControlMode.MonitorOnly,
             UpdatedAt = DateTimeOffset.UtcNow
         };
     }

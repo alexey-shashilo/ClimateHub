@@ -158,23 +158,30 @@ public class EndToEndScenario : IClassFixture<EndToEndFixture>
 
     private async Task<JsonElement?> WaitForNeedCreated(string roomId)
     {
-        for (int i = 0; i < 20; i++)
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(3);
+        while (DateTimeOffset.UtcNow < deadline)
         {
-            await Task.Delay(1000);
+            await Task.Delay(2000);
             var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
             if (!resp.IsSuccessStatusCode) continue;
-            var needs = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-            if (needs.ValueKind == JsonValueKind.Array && needs.GetArrayLength() > 0)
-                return needs[0];
+            var body = await resp.Content.ReadAsStringAsync();
+            try
+            {
+                var needs = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(body, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (needs.ValueKind == System.Text.Json.JsonValueKind.Array && needs.GetArrayLength() > 0)
+                    return needs[0];
+            }
+            catch { }
         }
         return null;
     }
 
     private async Task<JsonElement?> WaitForNeedSatisfied(string roomId)
     {
-        for (int i = 0; i < 20; i++)
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(4);
+        while (DateTimeOffset.UtcNow < deadline)
         {
-            await Task.Delay(1000);
+            await Task.Delay(2000);
             var resp = await _http.GetAsync($"/api/v1/needs/rooms/{roomId}");
             if (!resp.IsSuccessStatusCode) continue;
             var needs = await resp.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);

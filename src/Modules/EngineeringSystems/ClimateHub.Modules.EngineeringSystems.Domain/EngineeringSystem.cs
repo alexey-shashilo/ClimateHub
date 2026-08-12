@@ -141,7 +141,7 @@ public class EngineeringSystem : Entity<EngineeringSystemId>, IAggregateRoot
     public SystemStatus Status { get; private set; }
     public LifecycleStatus Lifecycle { get; private set; }
     public OperationalStatus OperationalStatus { get; private set; }
-    #pragma warning disable CS0618
+#pragma warning disable CS0618
     public SystemStatus LegacyStatus { get; private set; }
 #pragma warning restore CS0618
     public SystemControlMode ControlMode { get; private set; }
@@ -167,8 +167,8 @@ public class EngineeringSystem : Entity<EngineeringSystemId>, IAggregateRoot
     public ThermalSystemConfiguration? ThermalConfiguration { get; private set; }
     public HumidificationSystemConfiguration? HumidificationConfiguration { get; private set; }
     // [PROTOTYPE] Lighting is a prototype feature — not yet ready for production.
-// Excluded from production claims, audits, and compliance checks.
-public LightingSystemConfiguration? LightingConfiguration { get; private set; }
+    // Excluded from production claims, audits, and compliance checks.
+    public LightingSystemConfiguration? LightingConfiguration { get; private set; }
 
     public void SetHumidificationConfiguration(HumidificationSystemConfiguration config)
     {
@@ -332,7 +332,7 @@ public LightingSystemConfiguration? LightingConfiguration { get; private set; }
 public class SystemCapability
 {
     public Guid Id { get; private set; }
-    public Guid EngineeringSystemId { get; set; }
+    public EngineeringSystemId EngineeringSystemId { get; set; }
     public string Code { get; private set; } = string.Empty;
     public string? DataType { get; private set; }
     public string? Unit { get; private set; }
@@ -357,7 +357,7 @@ public class SystemCapability
 public class EngineeringResource
 {
     public Guid Id { get; private set; }
-    public Guid EngineeringSystemId { get; set; }
+    public EngineeringSystemId EngineeringSystemId { get; set; }
     public string Code { get; private set; } = string.Empty;
     public string? Unit { get; private set; }
     public double Maximum { get; private set; }

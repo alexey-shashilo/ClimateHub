@@ -6,6 +6,7 @@ using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MQTTnet;
 using MQTTnet.Protocol;
@@ -82,6 +83,8 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
             $"Port={_postgresContainer.GetMappedPublicPort(5432)};" +
             $"Database=climate_hub_e2e;Username=climate_hub;Password=climate_hub_e2e;";
 
+        await ClimateHub.Migrator.MigrationRunner.ApplyAllAsync(PostgresConnectionString);
+
         MqttPort = _mqttContainer.GetMappedPublicPort(1883);
         MqttHost = _mqttContainer.Hostname ?? "localhost";
         InfluxDbUrl = $"http://{_influxDbContainer.Hostname}:{_influxDbContainer.GetMappedPublicPort(8086)}";
@@ -89,6 +92,23 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
         AdminMqttClient = await ConnectAdminMqttClient();
 
         AuthToken = TestAuthHelper.GenerateToken();
+
+        ApplyProcessEnvironment();
+    }
+
+    private void ApplyProcessEnvironment()
+    {
+        System.Environment.SetEnvironmentVariable("Postgres__ConnectionString", PostgresConnectionString);
+        System.Environment.SetEnvironmentVariable("Mqtt__Host", MqttHost);
+        System.Environment.SetEnvironmentVariable("Mqtt__Port", MqttPort.ToString());
+        System.Environment.SetEnvironmentVariable("Mqtt__ClientId", "climate-hub-device-gateway");
+        System.Environment.SetEnvironmentVariable("InfluxDb__Url", InfluxDbUrl);
+        System.Environment.SetEnvironmentVariable("InfluxDb__Token", InfluxDbToken);
+        System.Environment.SetEnvironmentVariable("InfluxDb__Organization", "climate-hub");
+        System.Environment.SetEnvironmentVariable("InfluxDb__Bucket", "climate-hub");
+        System.Environment.SetEnvironmentVariable("Jwt__SigningKey", "test-signing-key-that-is-at-least-32-characters-long");
+        System.Environment.SetEnvironmentVariable("Jwt__Issuer", "ClimateHub");
+        System.Environment.SetEnvironmentVariable("Jwt__Audience", "ClimateHub.Api");
     }
 
     public HttpClient CreateAuthenticatedClient()
@@ -102,6 +122,18 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Test");
+        builder.ConfigureServices(services =>
+        {
+            services.Configure<ClimateHub.SharedKernel.Configuration.MqttOptions>(o =>
+            {
+                o.Host = MqttHost;
+                o.Port = MqttPort;
+                o.ClientId = "climate-hub-device-gateway";
+            });
+            services.AddScoped<ClimateHub.DeviceGateway.Services.TelemetryIngestionHandler>();
+            services.AddScoped<ClimateHub.DeviceGateway.Services.CommandEventConsumer>();
+            services.AddHostedService<ClimateHub.DeviceGateway.DeviceGatewayWorker>();
+        });
         builder.ConfigureAppConfiguration((context, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>

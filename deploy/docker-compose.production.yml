@@ -27,8 +27,14 @@ services:
       - ./mqtt/mosquitto.passwd:/mosquitto/config/mosquitto.passwd
       - mosquitto-data:/mosquitto/data
       - mosquitto-log:/mosquitto/log
+    environment:
+      MOSQUITTO_USERNAME: ${MQTT_MONITOR_USERNAME:-climate-hub-healthcheck}
+      MOSQUITTO_PASSWORD: ${MQTT_MONITOR_PASSWORD:?MQTT_MONITOR_PASSWORD is required}
+    # Broker is configured with allow_anonymous false, so the healthcheck must present
+    # real credentials. MOSQUITTO_USERNAME/MOSQUITTO_PASSWORD are passed to mosquitto_sub
+    # via environment variables (not CLI process args) to avoid leaking the secret in ps.
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/broker/uptime' -C 1 || exit 1"]
+      test: ["CMD-SHELL", "mosquitto_sub -C 1 -t '$$SYS/broker/uptime' -d > /dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5

@@ -73,14 +73,14 @@ public class ThermalStrategyEngine
         if (zone is not null && demands is not null)
             zonePlan = _demandAggregator.Aggregate(zone, demands);
 
-        var requiredPowerKw = zonePlan?.TotalRequiredHeatingPowerKw 
+        var requiredPowerKw = zonePlan?.TotalRequiredHeatingPowerKw
             ?? _heatLossEstimator.Estimate(config, outdoorTemp, indoorTemp, windSpeed).RequiredPower / 1000.0;
 
         var weatherResult = _weatherPlanner.Calculate(config, outdoorTemp, indoorTemp);
         var targetSupply = weatherResult.TargetSupplyTemperature;
 
         targetSupply = Math.Min(targetSupply, config.MaximumSupplyTemperature);
-        if (config.FreezeProtectionEnabled && outdoorTemp <= config.FreezeProtectionTemperature 
+        if (config.FreezeProtectionEnabled && outdoorTemp <= config.FreezeProtectionTemperature
             && targetSupply < config.FreezeProtectionSupplyTemperature)
             targetSupply = Math.Max(targetSupply, config.FreezeProtectionSupplyTemperature);
 
@@ -181,8 +181,11 @@ public class ThermalStrategyEngine
 
     private static double GetPumpSpeed(HydraulicCircuitType type) => type switch
     {
-        HydraulicCircuitType.FloorHeating => 60, HydraulicCircuitType.Radiators => 80,
-        HydraulicCircuitType.FanCoil => 90, HydraulicCircuitType.DHW => 100, _ => 70
+        HydraulicCircuitType.FloorHeating => 60,
+        HydraulicCircuitType.Radiators => 80,
+        HydraulicCircuitType.FanCoil => 90,
+        HydraulicCircuitType.DHW => 100,
+        _ => 70
     };
 
     private static double MapTempToValvePct(double temp, double minTemp, double maxTemp)

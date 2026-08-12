@@ -24,6 +24,7 @@ public class TelemetryIngestionHandler
     private readonly ITelemetryOutboxRepository _outboxRepository;
     private readonly IInfluxDbWriter _influxDbWriter;
     private readonly EnvironmentEventBus _eventBus;
+    private readonly ClimateHub.Infrastructure.InternalEvents.InternalEventOutboxRepository _internalOutbox;
     private readonly IBuildingModule _buildingModule;
     private readonly IDevicesModule _devicesModule;
     private readonly ILogger<TelemetryIngestionHandler> _logger;
@@ -37,6 +38,7 @@ public class TelemetryIngestionHandler
         IBuildingModule buildingModule,
         IDevicesModule devicesModule,
         EnvironmentEventBus eventBus,
+        ClimateHub.Infrastructure.InternalEvents.InternalEventOutboxRepository internalOutbox,
         ILogger<TelemetryIngestionHandler> logger)
     {
         _dbContext = dbContext;
@@ -47,6 +49,7 @@ public class TelemetryIngestionHandler
         _buildingModule = buildingModule;
         _devicesModule = devicesModule;
         _eventBus = eventBus;
+        _internalOutbox = internalOutbox;
         _logger = logger;
     }
 
@@ -68,7 +71,7 @@ public class TelemetryIngestionHandler
         EnvironmentTelemetryEnvelope? envelope;
         try
         {
-            envelope = JsonSerializer.Deserialize<EnvironmentTelemetryEnvelope>(payloadJson);
+            envelope = JsonSerializer.Deserialize<EnvironmentTelemetryEnvelope>(payloadJson, JsonDefaults.JsonOptions);
         }
         catch (JsonException ex)
         {
@@ -148,7 +151,7 @@ public class TelemetryIngestionHandler
         try
         {
             payload = envelope.Payload is not null
-                ? JsonSerializer.Deserialize<EnvironmentTelemetryPayload>(envelope.Payload.Value.GetRawText()) ?? new EnvironmentTelemetryPayload()
+                ? JsonSerializer.Deserialize<EnvironmentTelemetryPayload>(envelope.Payload.Value.GetRawText(), JsonDefaults.JsonOptions) ?? new EnvironmentTelemetryPayload()
                 : new EnvironmentTelemetryPayload();
         }
         catch (JsonException)
@@ -281,7 +284,38 @@ public class TelemetryIngestionHandler
             })
         });
 
-        // 17. Publish room environment state changed for Need Engine evaluation
+        // 17. Publish room environment state changed for Need Engine evaluation.
+        // Persist a durable internal event so the Needs/Climate engines observe it even
+        // when the gateway runs in a separate process from the API.
+        try
+        {
+            await _internalOutbox.CreateAsync(
+                eventType: "environment.state.changed",
+                aggregateType: "room",
+                aggregateId: roomId.Value.Value.ToString(),
+                buildingId: buildingId.Value,
+                roomId: roomId.Value.Value,
+                payload: new
+                {
+                    buildingId = buildingId.ToString(),
+                    roomId = roomId.ToString(),
+                    changedParameters,
+                    measuredAt,
+                    receivedAt = now,
+                    sourceDeviceId = deviceId.ToString()
+                },
+                headers: null,
+                correlationId: envelope.MessageId,
+                causationId: envelope.MessageId,
+                occurredAt: now,
+                cancellationToken
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to enqueue environment.state.changed for room {RoomId}", roomId);
+        }
+
         _eventBus.Publish(new EnvironmentUpdatedEvent
         {
             RoomId = roomId.Value,

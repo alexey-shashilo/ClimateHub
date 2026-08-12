@@ -36,7 +36,7 @@ public class NeedsDbContext(DbContextOptions<NeedsDbContext> options) : DbContex
             e.Ignore(n => n.DomainEvents);
 
             e.HasIndex(n => new { n.RoomId, n.Type })
-                .HasFilter("Status IN ('Detected', 'Planning', 'Planned', 'Executing', 'WaitingForEffect', 'Blocked')")
+                .HasFilter("\"Status\" IN ('Detected', 'Planning', 'Planned', 'Executing', 'WaitingForEffect', 'Blocked')")
                 .IsUnique();
 
             e.HasIndex(n => new { n.Status, n.CooldownUntil });
