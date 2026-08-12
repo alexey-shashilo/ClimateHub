@@ -95,9 +95,13 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Postgres:ConnectionString"] = PostgresConnectionString,
-                ["Mqtt:Host"] = MqttHost, ["Mqtt:Port"] = MqttPort.ToString(), ["Mqtt:ClientId"] = "climate-hub-test-api",
-                ["InfluxDb:Url"] = InfluxDbUrl, ["InfluxDb:Token"] = InfluxDbToken,
-                ["InfluxDb:Organization"] = "climate-hub", ["InfluxDb:Bucket"] = "climate-hub",
+                ["Mqtt:Host"] = MqttHost,
+                ["Mqtt:Port"] = MqttPort.ToString(),
+                ["Mqtt:ClientId"] = "climate-hub-test-api",
+                ["InfluxDb:Url"] = InfluxDbUrl,
+                ["InfluxDb:Token"] = InfluxDbToken,
+                ["InfluxDb:Organization"] = "climate-hub",
+                ["InfluxDb:Bucket"] = "climate-hub",
             });
         });
     }
@@ -109,10 +113,15 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Postgres:ConnectionString"] = PostgresConnectionString,
-            ["Mqtt:Host"] = MqttHost, ["Mqtt:Port"] = MqttPort.ToString(), ["Mqtt:ClientId"] = "climate-hub-test-gateway",
-            ["Mqtt:ReconnectBaseDelayMs"] = "1000", ["Mqtt:ReconnectMaxDelayMs"] = "5000",
-            ["InfluxDb:Url"] = InfluxDbUrl, ["InfluxDb:Token"] = InfluxDbToken,
-            ["InfluxDb:Organization"] = "climate-hub", ["InfluxDb:Bucket"] = "climate-hub",
+            ["Mqtt:Host"] = MqttHost,
+            ["Mqtt:Port"] = MqttPort.ToString(),
+            ["Mqtt:ClientId"] = "climate-hub-test-gateway",
+            ["Mqtt:ReconnectBaseDelayMs"] = "1000",
+            ["Mqtt:ReconnectMaxDelayMs"] = "5000",
+            ["InfluxDb:Url"] = InfluxDbUrl,
+            ["InfluxDb:Token"] = InfluxDbToken,
+            ["InfluxDb:Organization"] = "climate-hub",
+            ["InfluxDb:Bucket"] = "climate-hub",
         });
 
         builder.Services.AddClimateHubInfrastructure();
@@ -145,9 +154,15 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
     {
         var telemetry = JsonSerializer.Serialize(new
         {
-            messageId = Guid.NewGuid().ToString(), messageType = "environment.telemetry", protocolVersion = "1.0",
-            buildingId, deviceId, bootId = Guid.NewGuid().ToString(),
-            sequenceNumber = Random.Shared.Next(1, 100000), measuredAt = DateTimeOffset.UtcNow.ToString("O"), payload
+            messageId = Guid.NewGuid().ToString(),
+            messageType = "environment.telemetry",
+            protocolVersion = "1.0",
+            buildingId,
+            deviceId,
+            bootId = Guid.NewGuid().ToString(),
+            sequenceNumber = Random.Shared.Next(1, 100000),
+            measuredAt = DateTimeOffset.UtcNow.ToString("O"),
+            payload
         });
 
         await AdminMqttClient.PublishAsync(new MqttApplicationMessageBuilder()

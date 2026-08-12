@@ -113,11 +113,11 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
     private async Task<E2eContext> SetupFullEngineeringRuntime(ActuatorMode mode = ActuatorMode.Successful)
     {
         var ctx = new E2eContext();
-        
+
         // Verify API is accessible first
         var live = await _http.GetAsync("/health/live");
         Assert.True(live.IsSuccessStatusCode, "Health check should pass first");
-        
+
         var building = await PostRead("/api/v1/buildings", new { name = $"E2E-B-{Guid.NewGuid():N}"[..15] });
         ctx.BuildingId = ReqStr(building, "id");
         var floor = await PostRead($"/api/v1/buildings/{ctx.BuildingId}/floors", new { name = "Ground", level = 0 });
@@ -133,21 +133,32 @@ public class ProductionE2EScenarios : IClassFixture<E2eProductionFixture>
 
         var sensor = await PostRead("/api/v1/devices", new
         {
-            hardwareId = $"SENSOR-{Guid.NewGuid():N}"[..20], name = "CO2 Sensor", manufacturer = "E2E", modelName = "CS-100", protocolVersion = "1.0"
+            hardwareId = $"SENSOR-{Guid.NewGuid():N}"[..20],
+            name = "CO2 Sensor",
+            manufacturer = "E2E",
+            modelName = "CS-100",
+            protocolVersion = "1.0"
         });
         ctx.SensorDeviceId = ReqStr(sensor, "id");
         await _http.PostAsJsonAsync($"/api/v1/devices/{ctx.SensorDeviceId}/assignments", new { roomId = ctx.RoomId });
 
         var fanDevice = await PostRead("/api/v1/devices", new
         {
-            hardwareId = $"FAN-{Guid.NewGuid():N}"[..20], name = "Supply Fan", manufacturer = "E2E", modelName = "SF-200", protocolVersion = "1.0"
+            hardwareId = $"FAN-{Guid.NewGuid():N}"[..20],
+            name = "Supply Fan",
+            manufacturer = "E2E",
+            modelName = "SF-200",
+            protocolVersion = "1.0"
         });
         ctx.FanDeviceId = ReqStr(fanDevice, "id");
         await _http.PostAsJsonAsync($"/api/v1/devices/{ctx.FanDeviceId}/assignments", new { roomId = ctx.RoomId });
 
         var engSystem = await PostRead("/api/v1/engineering-systems", new
         {
-            buildingId = ctx.BuildingId, name = "Supply Ventilation", systemType = "SupplyVentilation", priority = 50,
+            buildingId = ctx.BuildingId,
+            name = "Supply Ventilation",
+            systemType = "SupplyVentilation",
+            priority = 50,
             capabilities = new[] { new { code = "eng.co2.reduce", dataType = "double", unit = "ppm", minimum = 0.0, maximum = 10000.0 }, new { code = "eng.airflow.increase", dataType = "double", unit = "m3h", minimum = 0.0, maximum = 10000.0 } },
             resources = new[] { new { code = "airflow_capacity", maximum = 5000.0, unit = "m3h", priority = 50 } }
         });

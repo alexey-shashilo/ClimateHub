@@ -196,7 +196,7 @@ public class CommandPlanExecutor
         {
             var allDone = plan.Steps.All(s => s.Status == CommandPlanStepStatus.Succeeded);
             var anyFailed = plan.Steps.Any(s => s.Status == CommandPlanStepStatus.Failed);
-            
+
             if (allDone)
             {
                 plan.SetSucceeded();

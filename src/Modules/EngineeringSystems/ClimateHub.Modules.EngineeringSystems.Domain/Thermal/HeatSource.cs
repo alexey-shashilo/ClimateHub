@@ -81,8 +81,10 @@ public class HeatSource : Entity<HeatSourceId>, IAggregateRoot
 
     private double CooldownRemainingMinutes() => SourceType switch
     {
-        HeatSourceType.GasBoiler => 3, HeatSourceType.PelletBoiler => 10,
-        HeatSourceType.HeatPump => 5, _ => 2
+        HeatSourceType.GasBoiler => 3,
+        HeatSourceType.PelletBoiler => 10,
+        HeatSourceType.HeatPump => 5,
+        _ => 2
     };
 
     private void Transition(HeatSourceRuntimeState to)

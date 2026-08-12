@@ -91,9 +91,15 @@ public class FullStackFixture : WebApplicationFactory<Program>, IAsyncLifetime
         gwBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Postgres:ConnectionString"] = PostgresConnectionString,
-            ["Mqtt:Host"] = MqttHost, ["Mqtt:Port"] = MqttPort.ToString(), ["Mqtt:ClientId"] = "climate-hub-deploy-gateway",
-            ["Mqtt:ReconnectBaseDelayMs"] = "1000", ["Mqtt:ReconnectMaxDelayMs"] = "5000",
-            ["InfluxDb:Url"] = InfluxDbUrl, ["InfluxDb:Token"] = InfluxDbToken, ["InfluxDb:Organization"] = "climate-hub", ["InfluxDb:Bucket"] = "climate-hub",
+            ["Mqtt:Host"] = MqttHost,
+            ["Mqtt:Port"] = MqttPort.ToString(),
+            ["Mqtt:ClientId"] = "climate-hub-deploy-gateway",
+            ["Mqtt:ReconnectBaseDelayMs"] = "1000",
+            ["Mqtt:ReconnectMaxDelayMs"] = "5000",
+            ["InfluxDb:Url"] = InfluxDbUrl,
+            ["InfluxDb:Token"] = InfluxDbToken,
+            ["InfluxDb:Organization"] = "climate-hub",
+            ["InfluxDb:Bucket"] = "climate-hub",
         });
 
         gwBuilder.Services.AddClimateHubInfrastructure();
@@ -127,10 +133,16 @@ public class FullStackFixture : WebApplicationFactory<Program>, IAsyncLifetime
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Postgres:ConnectionString"] = PostgresConnectionString,
-                ["Mqtt:Host"] = MqttHost, ["Mqtt:Port"] = MqttPort.ToString(), ["Mqtt:ClientId"] = "climate-hub-deploy-api",
-                ["InfluxDb:Url"] = InfluxDbUrl, ["InfluxDb:Token"] = InfluxDbToken, ["InfluxDb:Organization"] = "climate-hub", ["InfluxDb:Bucket"] = "climate-hub",
+                ["Mqtt:Host"] = MqttHost,
+                ["Mqtt:Port"] = MqttPort.ToString(),
+                ["Mqtt:ClientId"] = "climate-hub-deploy-api",
+                ["InfluxDb:Url"] = InfluxDbUrl,
+                ["InfluxDb:Token"] = InfluxDbToken,
+                ["InfluxDb:Organization"] = "climate-hub",
+                ["InfluxDb:Bucket"] = "climate-hub",
                 ["Jwt:SigningKey"] = "test-signing-key-that-is-at-least-32-characters-long",
-                ["Jwt:Issuer"] = "ClimateHub", ["Jwt:Audience"] = "ClimateHub.Api",
+                ["Jwt:Issuer"] = "ClimateHub",
+                ["Jwt:Audience"] = "ClimateHub.Api",
             });
         });
     }
@@ -223,8 +235,11 @@ public class DeploymentVerificationTests : IClassFixture<FullStackFixture>
 
         var dev = await _http.PostAndReadAsync("/api/v1/devices", new
         {
-            hardwareId = $"DEPLOY-DEV-{Guid.NewGuid():N}"[..20], name = "Deploy Device",
-            manufacturer = "Test", modelName = "T-100", protocolVersion = "1.0"
+            hardwareId = $"DEPLOY-DEV-{Guid.NewGuid():N}"[..20],
+            name = "Deploy Device",
+            manufacturer = "Test",
+            modelName = "T-100",
+            protocolVersion = "1.0"
         });
         var deviceId = dev.GetProperty("id").GetString();
         Assert.NotNull(deviceId);
@@ -269,17 +284,25 @@ public class DeploymentVerificationTests : IClassFixture<FullStackFixture>
 
         var sensor = await _http.PostAndReadAsync("/api/v1/devices", new
         {
-            hardwareId = $"DEPLOY-SENSOR-{Guid.NewGuid():N}"[..20], name = "Deploy Sensor",
-            manufacturer = "Test", modelName = "S-100", protocolVersion = "1.0"
+            hardwareId = $"DEPLOY-SENSOR-{Guid.NewGuid():N}"[..20],
+            name = "Deploy Sensor",
+            manufacturer = "Test",
+            modelName = "S-100",
+            protocolVersion = "1.0"
         });
         var sensorId = sensor.GetProperty("id").GetString()!;
         await _http.PostAsJsonAsync($"/api/v1/devices/{sensorId}/assignments", new { roomId = room });
 
         var telemetry = System.Text.Json.JsonSerializer.Serialize(new
         {
-            messageId = Guid.NewGuid().ToString(), messageType = "environment.telemetry", protocolVersion = "1.0",
-            buildingId = building, deviceId = sensorId, bootId = Guid.NewGuid().ToString(),
-            sequenceNumber = 1, measuredAt = DateTimeOffset.UtcNow.ToString("O"),
+            messageId = Guid.NewGuid().ToString(),
+            messageType = "environment.telemetry",
+            protocolVersion = "1.0",
+            buildingId = building,
+            deviceId = sensorId,
+            bootId = Guid.NewGuid().ToString(),
+            sequenceNumber = 1,
+            measuredAt = DateTimeOffset.UtcNow.ToString("O"),
             payload = new { temperatureC = 23.5, relativeHumidityPct = 45.0 }
         });
 

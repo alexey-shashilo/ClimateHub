@@ -62,7 +62,7 @@ public class ConflictResolver
                         var loser = winner == other ? capability : other;
 
                         conflicts.Add(new ClimateConflict(Guid.Empty, ConflictType.CrossSystemNegativeEffect,
-                            capability, other, winner, loser, $"{winner} prioritized over {loser}", 
+                            capability, other, winner, loser, $"{winner} prioritized over {loser}",
                             $"{capability} negatively affects {other}"));
 
                         if (loser == other)

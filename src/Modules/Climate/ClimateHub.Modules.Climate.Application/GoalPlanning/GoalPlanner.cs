@@ -54,34 +54,34 @@ public class GoalPlanner
 
     private static (double target, double min, double max) GetTemperatureTargets(
         StrategyProfile profile, RoomPolicyDto? policy) => profile switch
-    {
-        StrategyProfile.EnergySaving => (19, 18, 24),
-        StrategyProfile.Night => (18, 17, 22),
-        StrategyProfile.Away => (16, 15, 28),
-        StrategyProfile.Sleep => (20, 19, 23),
-        StrategyProfile.Vacation => (14, 12, 30),
-        _ => (policy?.TemperaturePreferred ?? 23,
-              policy?.TemperatureMin ?? 20,
-              policy?.TemperatureMax ?? 26)
-    };
+        {
+            StrategyProfile.EnergySaving => (19, 18, 24),
+            StrategyProfile.Night => (18, 17, 22),
+            StrategyProfile.Away => (16, 15, 28),
+            StrategyProfile.Sleep => (20, 19, 23),
+            StrategyProfile.Vacation => (14, 12, 30),
+            _ => (policy?.TemperaturePreferred ?? 23,
+                  policy?.TemperatureMin ?? 20,
+                  policy?.TemperatureMax ?? 26)
+        };
 
     private static (double target, double min, double max) GetHumidityTargets(
         StrategyProfile profile, RoomPolicyDto? policy) => profile switch
-    {
-        StrategyProfile.EnergySaving => (45, 30, 60),
-        _ => (policy?.HumidityPreferred ?? 45,
-              policy?.HumidityMin ?? 30,
-              policy?.HumidityMax ?? 60)
-    };
+        {
+            StrategyProfile.EnergySaving => (45, 30, 60),
+            _ => (policy?.HumidityPreferred ?? 45,
+                  policy?.HumidityMin ?? 30,
+                  policy?.HumidityMax ?? 60)
+        };
 
     private static (double target, double max) GetCo2Targets(
         StrategyProfile profile, RoomPolicyDto? policy) => profile switch
-    {
-        StrategyProfile.MaximumAirQuality => (400, 800),
-        StrategyProfile.Sleep => (500, 800),
-        _ => (policy?.Co2Preferred ?? 600,
-              policy?.Co2Max ?? 1000)
-    };
+        {
+            StrategyProfile.MaximumAirQuality => (400, 800),
+            StrategyProfile.Sleep => (500, 800),
+            _ => (policy?.Co2Preferred ?? 600,
+                  policy?.Co2Max ?? 1000)
+        };
 
     private static double GetIlluminanceTarget(StrategyProfile profile, RoomPolicyDto? policy) => profile switch
     {

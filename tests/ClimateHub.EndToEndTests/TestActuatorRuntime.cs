@@ -95,7 +95,8 @@ public class TestActuatorRuntime : IAsyncDisposable
         await _simulatedLatency.Delay();
         await PublishEvent("result", new
         {
-            commandId = cmd.CommandId, status = overrideStatus,
+            commandId = cmd.CommandId,
+            status = overrideStatus,
             timestamp = DateTimeOffset.UtcNow.ToString("O"),
             reportedState = new { state = "on", value = 22.5, changedAt = DateTimeOffset.UtcNow.ToString("O") }
         });
@@ -117,7 +118,10 @@ public class TestActuatorRuntime : IAsyncDisposable
         {
             _receivedCommands.Add(new CapturedCommand
             {
-                Topic = msg.Topic, Payload = payload, CommandId = commandId, ReceivedAt = DateTimeOffset.UtcNow
+                Topic = msg.Topic,
+                Payload = payload,
+                CommandId = commandId,
+                ReceivedAt = DateTimeOffset.UtcNow
             });
         }
 
@@ -138,8 +142,14 @@ public class TestActuatorRuntime : IAsyncDisposable
                 await _simulatedLatency.Delay();
                 await PublishEvent("progress", new { commandId });
                 await _simulatedLatency.Delay();
-                await PublishEvent("result", new { commandId, status = "failed", errorCode = "HARDWARE_ERROR",
-                    errorMessage = "Device reported hardware failure", timestamp = DateTimeOffset.UtcNow.ToString("O") });
+                await PublishEvent("result", new
+                {
+                    commandId,
+                    status = "failed",
+                    errorCode = "HARDWARE_ERROR",
+                    errorMessage = "Device reported hardware failure",
+                    timestamp = DateTimeOffset.UtcNow.ToString("O")
+                });
                 break;
 
             case ActuatorMode.LateTelemetry:
@@ -147,9 +157,13 @@ public class TestActuatorRuntime : IAsyncDisposable
                 await _simulatedLatency.Delay();
                 await PublishEvent("progress", new { commandId });
                 await _simulatedLatency.Delay();
-                await PublishEvent("result", new { commandId, status = "succeeded",
+                await PublishEvent("result", new
+                {
+                    commandId,
+                    status = "succeeded",
                     timestamp = DateTimeOffset.UtcNow.ToString("O"),
-                    reportedState = new { state = "on", value = 22.5, changedAt = DateTimeOffset.UtcNow.ToString("O") } });
+                    reportedState = new { state = "on", value = 22.5, changedAt = DateTimeOffset.UtcNow.ToString("O") }
+                });
                 await Task.Delay(5000); // Late telemetry after significant delay
                 await PublishEffectTelemetry(payload);
                 break;
@@ -177,9 +191,14 @@ public class TestActuatorRuntime : IAsyncDisposable
 
             case ActuatorMode.CapabilityUnsupported:
                 await PublishEvent("ack", new { commandId });
-                await PublishEvent("result", new { commandId, status = "failed",
-                    errorCode = "CAPABILITY_UNSUPPORTED", errorMessage = "This device does not support the requested capability",
-                    timestamp = DateTimeOffset.UtcNow.ToString("O") });
+                await PublishEvent("result", new
+                {
+                    commandId,
+                    status = "failed",
+                    errorCode = "CAPABILITY_UNSUPPORTED",
+                    errorMessage = "This device does not support the requested capability",
+                    timestamp = DateTimeOffset.UtcNow.ToString("O")
+                });
                 break;
 
             case ActuatorMode.DuplicateAck:
@@ -208,7 +227,9 @@ public class TestActuatorRuntime : IAsyncDisposable
 
         await PublishEvent("result", new
         {
-            commandId, status = "succeeded", timestamp = DateTimeOffset.UtcNow.ToString("O"),
+            commandId,
+            status = "succeeded",
+            timestamp = DateTimeOffset.UtcNow.ToString("O"),
             reportedState = new { state = "on", value, changedAt = DateTimeOffset.UtcNow.ToString("O") }
         });
 
@@ -222,9 +243,14 @@ public class TestActuatorRuntime : IAsyncDisposable
 
         var telemetry = JsonSerializer.Serialize(new
         {
-            messageId = Guid.NewGuid().ToString(), messageType = "environment.telemetry", protocolVersion = "1.0",
-            buildingId = _buildingId, deviceId = _deviceId, bootId = Guid.NewGuid().ToString(),
-            sequenceNumber = Random.Shared.Next(1, 100000), measuredAt = DateTimeOffset.UtcNow.ToString("O"),
+            messageId = Guid.NewGuid().ToString(),
+            messageType = "environment.telemetry",
+            protocolVersion = "1.0",
+            buildingId = _buildingId,
+            deviceId = _deviceId,
+            bootId = Guid.NewGuid().ToString(),
+            sequenceNumber = Random.Shared.Next(1, 100000),
+            measuredAt = DateTimeOffset.UtcNow.ToString("O"),
             payload = telemetryPayload
         });
 
@@ -286,9 +312,15 @@ public class TestActuatorRuntime : IAsyncDisposable
     {
         var envelope = JsonSerializer.Serialize(new
         {
-            messageId = Guid.NewGuid().ToString(), messageType = $"command.{eventType}", protocolVersion = "1.0",
-            buildingId = _buildingId, deviceId = _deviceId, commandId = "", attemptNumber = 1,
-            createdAt = DateTimeOffset.UtcNow.ToString("O"), payload
+            messageId = Guid.NewGuid().ToString(),
+            messageType = $"command.{eventType}",
+            protocolVersion = "1.0",
+            buildingId = _buildingId,
+            deviceId = _deviceId,
+            commandId = "",
+            attemptNumber = 1,
+            createdAt = DateTimeOffset.UtcNow.ToString("O"),
+            payload
         });
 
         await _publisher.PublishAsync(new MqttApplicationMessageBuilder()

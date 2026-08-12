@@ -141,7 +141,7 @@ public class EngineeringSystem : Entity<EngineeringSystemId>, IAggregateRoot
     public SystemStatus Status { get; private set; }
     public LifecycleStatus Lifecycle { get; private set; }
     public OperationalStatus OperationalStatus { get; private set; }
-    #pragma warning disable CS0618
+#pragma warning disable CS0618
     public SystemStatus LegacyStatus { get; private set; }
 #pragma warning restore CS0618
     public SystemControlMode ControlMode { get; private set; }
@@ -167,8 +167,8 @@ public class EngineeringSystem : Entity<EngineeringSystemId>, IAggregateRoot
     public ThermalSystemConfiguration? ThermalConfiguration { get; private set; }
     public HumidificationSystemConfiguration? HumidificationConfiguration { get; private set; }
     // [PROTOTYPE] Lighting is a prototype feature — not yet ready for production.
-// Excluded from production claims, audits, and compliance checks.
-public LightingSystemConfiguration? LightingConfiguration { get; private set; }
+    // Excluded from production claims, audits, and compliance checks.
+    public LightingSystemConfiguration? LightingConfiguration { get; private set; }
 
     public void SetHumidificationConfiguration(HumidificationSystemConfiguration config)
     {

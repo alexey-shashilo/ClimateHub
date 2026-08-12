@@ -54,10 +54,15 @@ public class RuntimeRestartRecoveryTests
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Postgres:ConnectionString"] = _cs,
-                    ["Mqtt:Host"] = _mqttHost, ["Mqtt:Port"] = _mqttPort.ToString(), ["Mqtt:ClientId"] = _clientId,
-                    ["Mqtt:ReconnectBaseDelayMs"] = "1000", ["Mqtt:ReconnectMaxDelayMs"] = "5000",
-                    ["InfluxDb:Url"] = "http://localhost:8086", ["InfluxDb:Token"] = "recovery-token",
-                    ["InfluxDb:Organization"] = "climate-hub", ["InfluxDb:Bucket"] = "climate-hub",
+                    ["Mqtt:Host"] = _mqttHost,
+                    ["Mqtt:Port"] = _mqttPort.ToString(),
+                    ["Mqtt:ClientId"] = _clientId,
+                    ["Mqtt:ReconnectBaseDelayMs"] = "1000",
+                    ["Mqtt:ReconnectMaxDelayMs"] = "5000",
+                    ["InfluxDb:Url"] = "http://localhost:8086",
+                    ["InfluxDb:Token"] = "recovery-token",
+                    ["InfluxDb:Organization"] = "climate-hub",
+                    ["InfluxDb:Bucket"] = "climate-hub",
                 });
             });
         }
@@ -116,8 +121,11 @@ public class RuntimeRestartRecoveryTests
     {
         var r = await c.PostAsJsonAsync("/api/v1/devices", new
         {
-            hardwareId = $"{prefix}-{Guid.NewGuid():N}"[..20], name = $"{prefix} Device",
-            manufacturer = "Test", modelName = "R-100", protocolVersion = "1.0"
+            hardwareId = $"{prefix}-{Guid.NewGuid():N}"[..20],
+            name = $"{prefix} Device",
+            manufacturer = "Test",
+            modelName = "R-100",
+            protocolVersion = "1.0"
         });
         r.EnsureSuccessStatusCode();
         return (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
@@ -204,7 +212,10 @@ public class RuntimeRestartRecoveryTests
 
             var eng = await c.PostAsJsonAsync("/api/v1/engineering-systems", new
             {
-                buildingId = b, name = "Recovery Ventilation", systemType = "SupplyVentilation", priority = 50,
+                buildingId = b,
+                name = "Recovery Ventilation",
+                systemType = "SupplyVentilation",
+                priority = 50,
                 capabilities = new[] { new { code = "eng.co2.reduce", dataType = "double", unit = "ppm", minimum = 0.0, maximum = 10000.0 } },
                 resources = new[] { new { code = "airflow_capacity", maximum = 5000.0, unit = "m3h", priority = 50 } }
             });
@@ -241,8 +252,11 @@ public class RuntimeRestartRecoveryTests
 
             await c.PostAsJsonAsync("/api/v1/devices", new
             {
-                hardwareId = $"REC-CMD-{Guid.NewGuid():N}"[..20], name = "Recovery Cmd",
-                manufacturer = "Test", modelName = "RC-100", protocolVersion = "1.0"
+                hardwareId = $"REC-CMD-{Guid.NewGuid():N}"[..20],
+                name = "Recovery Cmd",
+                manufacturer = "Test",
+                modelName = "RC-100",
+                protocolVersion = "1.0"
             });
         }
 
@@ -313,7 +327,10 @@ public class RuntimeRestartRecoveryTests
             var b = await CreateBuilding(c);
             var eng = await c.PostAsJsonAsync("/api/v1/engineering-systems", new
             {
-                buildingId = b, name = "Recovery System", systemType = "SupplyVentilation", priority = 50,
+                buildingId = b,
+                name = "Recovery System",
+                systemType = "SupplyVentilation",
+                priority = 50,
                 capabilities = new[] { new { code = "eng.co2.reduce", dataType = "double", unit = "ppm", minimum = 0.0, maximum = 10000.0 } },
                 resources = new[] { new { code = "airflow_capacity", maximum = 5000.0, unit = "m3h", priority = 50 } }
             });

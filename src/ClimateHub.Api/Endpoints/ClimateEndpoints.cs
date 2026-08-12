@@ -63,8 +63,11 @@ public static class ClimateEndpoints
                 ConflictCount = result.Plan.Conflicts.Count,
                 Conflicts = result.Plan.Conflicts.Select(c => new
                 {
-                    c.Reason, c.ConflictType, c.Resolution,
-                    c.WinnerCapability, c.LoserCapability
+                    c.Reason,
+                    c.ConflictType,
+                    c.Resolution,
+                    c.WinnerCapability,
+                    c.LoserCapability
                 }),
                 SubPlans = result.Plan.SubPlans.Select(sp => new
                 {
