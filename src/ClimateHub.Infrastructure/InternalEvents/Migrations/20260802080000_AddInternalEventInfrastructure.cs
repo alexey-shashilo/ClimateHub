@@ -1,4 +1,6 @@
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -6,6 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace ClimateHub.Infrastructure.InternalEvents.Migrations
 {
+    [DbContext(typeof(ClimateHub.Infrastructure.InternalEvents.InternalEventsDbContext))]
+    [Migration("20260802080000_AddInternalEventInfrastructure")]
     public partial class AddInternalEventInfrastructure : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

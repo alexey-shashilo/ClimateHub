@@ -18,7 +18,7 @@ public class HydraulicAllocationPlan
 public class HydraulicDemandAllocator
 {
     public HydraulicAllocationPlan Allocate(
-        List<HydraulicCircuit> circuits, 
+        List<HydraulicCircuit> circuits,
         List<(Guid ZoneId, double RequiredPowerKw, int Priority)> zoneDemands,
         double totalAvailablePowerKw)
     {

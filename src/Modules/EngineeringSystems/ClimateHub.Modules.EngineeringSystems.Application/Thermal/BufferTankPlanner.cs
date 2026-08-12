@@ -13,7 +13,7 @@ public class BufferPlan
 
 public class BufferTankPlanner
 {
-    public BufferPlan Plan(BufferTank? buffer, double requiredPowerKw, 
+    public BufferPlan Plan(BufferTank? buffer, double requiredPowerKw,
         bool sourceMustRunForMinRuntime, double excessCapacityKw)
     {
         if (buffer is null || buffer.ChargeStatus == ChargeStatus.Unavailable || buffer.ChargeStatus == ChargeStatus.Faulted)

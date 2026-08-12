@@ -32,7 +32,13 @@ public static class EngineeringSystemsEndpoints
             var system = await repo.GetByIdAsync(EngineeringSystemId.From(guid), ct);
             return system is null ? Results.Problem(statusCode: 404) : Results.Ok(system.Resources.Select(r => new
             {
-                r.Code, r.Unit, r.Maximum, r.Available, r.Reserved, r.Used, r.Priority
+                r.Code,
+                r.Unit,
+                r.Maximum,
+                r.Available,
+                r.Reserved,
+                r.Used,
+                r.Priority
             }));
         }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
@@ -42,7 +48,10 @@ public static class EngineeringSystemsEndpoints
             var system = await repo.GetByIdAsync(EngineeringSystemId.From(guid), ct);
             return system is null ? Results.Problem(statusCode: 404) : Results.Ok(system.Zones.Select(z => new
             {
-                z.Id, z.Name, z.Priority, RoomIds = z.ZoneRooms.Select(zr => zr.RoomId.ToString())
+                z.Id,
+                z.Name,
+                z.Priority,
+                RoomIds = z.ZoneRooms.Select(zr => zr.RoomId.ToString())
             }));
         }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
@@ -52,7 +61,11 @@ public static class EngineeringSystemsEndpoints
             var system = await repo.GetByIdAsync(EngineeringSystemId.From(guid), ct);
             return system is null ? Results.Problem(statusCode: 404) : Results.Ok(system.DeviceBindings.Select(b => new
             {
-                b.Id, b.DeviceId, b.Role, b.Priority, b.Enabled
+                b.Id,
+                b.DeviceId,
+                b.Role,
+                b.Priority,
+                b.Enabled
             }));
         }).RequireEngineeringSystemAccess().RequirePermission("engineering_read");
 
@@ -72,8 +85,12 @@ public static class EngineeringSystemsEndpoints
             var activePlans = await planRepo.GetBySystemAsync(EngineeringSystemId.From(guid), ct);
             return Results.Ok(new
             {
-                system.Id, system.Name, system.SystemType, Lifecycle = system.Lifecycle.ToString(),
-                OperationalStatus = system.OperationalStatus.ToString(), system.ControlMode,
+                system.Id,
+                system.Name,
+                system.SystemType,
+                Lifecycle = system.Lifecycle.ToString(),
+                OperationalStatus = system.OperationalStatus.ToString(),
+                system.ControlMode,
                 Resources = system.Resources.Select(r => new { r.Code, r.Maximum, r.Available, r.Reserved, r.Used }),
                 ActivePlanCount = activePlans.Count(p => p.Status == CommandPlanStatus.Executing || p.Status == CommandPlanStatus.Reserved || p.Status == CommandPlanStatus.Allocated)
             });
@@ -102,7 +119,13 @@ public static class EngineeringSystemsEndpoints
             {
                 SystemId = s.Id.ToString(),
                 SystemName = s.Name,
-                r.Code, r.Unit, r.Maximum, r.Available, r.Reserved, r.Used, r.Priority
+                r.Code,
+                r.Unit,
+                r.Maximum,
+                r.Available,
+                r.Reserved,
+                r.Used,
+                r.Priority
             })));
         }).RequirePermission("engineering_read");
 
@@ -144,23 +167,38 @@ public static class EngineeringSystemsEndpoints
 
     public static object MapToDto(EngineeringSystem s) => new
     {
-        s.Id, s.BuildingId, s.Name, SystemType = s.SystemType.ToString(),
-        Lifecycle = s.Lifecycle.ToString(), OperationalStatus = s.OperationalStatus.ToString(),
+        s.Id,
+        s.BuildingId,
+        s.Name,
+        SystemType = s.SystemType.ToString(),
+        Lifecycle = s.Lifecycle.ToString(),
+        OperationalStatus = s.OperationalStatus.ToString(),
         ControlMode = s.ControlMode.ToString(),
-        s.Priority, s.Description,
+        s.Priority,
+        s.Description,
         Capabilities = s.Capabilities.Select(c => new { c.Code, c.DataType, c.Unit, c.Minimum, c.Maximum, c.SupportsModulation }),
         Resources = s.Resources.Select(r => new { r.Code, r.Unit, r.Maximum, r.Available, r.Reserved, r.Used, r.Priority }),
-        ZoneCount = s.Zones.Count, DeviceCount = s.DeviceBindings.Count(b => b.Enabled), s.Version
+        ZoneCount = s.Zones.Count,
+        DeviceCount = s.DeviceBindings.Count(b => b.Enabled),
+        s.Version
     };
 
     public static object MapPlanToDto(CommandPlan p) => new
     {
-        p.Id, EngineeringSystemId = p.EngineeringSystemId.ToString(),
-        p.NeedType, p.CapabilityCode, Status = p.Status.ToString(),
-        p.RequestedValue, p.ValueUnit, p.StrategyName,
+        p.Id,
+        EngineeringSystemId = p.EngineeringSystemId.ToString(),
+        p.NeedType,
+        p.CapabilityCode,
+        Status = p.Status.ToString(),
+        p.RequestedValue,
+        p.ValueUnit,
+        p.StrategyName,
         Steps = p.Steps.Select(s => new { s.CapabilityCode, s.Operation, s.RequestedValue, s.ValueUnit, DeviceId = s.DeviceId?.ToString(), s.Sequence, s.DeviceRole, s.Status, StatusStr = s.Status.ToString() }),
         ResourceAllocations = p.ResourceAllocations.Select(a => new { a.ResourceCode, a.Amount }),
-        p.CreatedAt, p.CompletedAt, p.FailureCode, p.Version
+        p.CreatedAt,
+        p.CompletedAt,
+        p.FailureCode,
+        p.Version
     };
 }
 

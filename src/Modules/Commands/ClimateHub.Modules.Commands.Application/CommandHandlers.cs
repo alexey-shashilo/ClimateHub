@@ -87,9 +87,13 @@ public class CreateCommandHandler(
 
         var outbox = new CommandOutbox
         {
-            CommandId = cmdId, DeviceId = deviceId, Topic = mqttTopic,
-            Payload = outboxPayload, Status = "Pending",
-            CreatedAt = DateTimeOffset.UtcNow, AvailableAt = DateTimeOffset.UtcNow
+            CommandId = cmdId,
+            DeviceId = deviceId,
+            Topic = mqttTopic,
+            Payload = outboxPayload,
+            Status = "Pending",
+            CreatedAt = DateTimeOffset.UtcNow,
+            AvailableAt = DateTimeOffset.UtcNow
         };
 
         await stateRepo.UpsertDesiredAsync(deviceId, request.CapabilityCode, request.ParametersJson, cmdId, ct);
@@ -118,8 +122,12 @@ public class CancelCommandHandler(ICommandRepository cmdRepo, ICommandOutboxRepo
             var topic = $"climate-hub/v1/{cmd.BuildingId}/{cmd.DeviceId}/command/cancel";
             await outboxRepo.AddAsync(new CommandOutbox
             {
-                CommandId = cmd.Id, DeviceId = cmd.DeviceId, Topic = topic,
-                Status = "Pending", CreatedAt = DateTimeOffset.UtcNow, AvailableAt = DateTimeOffset.UtcNow
+                CommandId = cmd.Id,
+                DeviceId = cmd.DeviceId,
+                Topic = topic,
+                Status = "Pending",
+                CreatedAt = DateTimeOffset.UtcNow,
+                AvailableAt = DateTimeOffset.UtcNow
             }, ct);
         }
         else if (cmd.Status is CommandStatus.Queued or CommandStatus.Created or CommandStatus.Validated) { cmd.Cancel(); }

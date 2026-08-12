@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ClimateHub.EndToEndTests;
@@ -12,7 +11,7 @@ public static class TestAuthHelper
     private static readonly string[] DefaultPermissions =
     [
         "building_read", "building_configure",
-        "device_read", "device_configure",
+        "device_read", "device_configure", "device_register", "device_delete",
         "environment_read",
         "policy_read", "policy_configure",
         "need_read", "need_execute", "need_configure",
@@ -20,9 +19,9 @@ public static class TestAuthHelper
         "command_read", "command_create", "command_cancel"
     ];
 
-    public static string GenerateToken(string userId = "e2e-test-admin", string[]? permissions = null)
+    public static string GenerateToken(string userId = "11111111-1111-1111-1111-111111111111", string[]? permissions = null)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
+        var key = ClimateHub.Modules.IAM.Domain.JwtSecurityKeys.Create(SigningKey);
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>

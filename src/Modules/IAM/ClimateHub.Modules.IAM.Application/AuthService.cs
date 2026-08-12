@@ -172,8 +172,7 @@ public class AuthService : IAuthService
 
     private string GenerateAccessToken(UserAccount user, List<Role> roles, List<Permission> permissions)
     {
-        var key = new SymmetricSecurityKey(
-            System.Text.Encoding.UTF8.GetBytes(_jwtOptions.SigningKey));
+        var key = JwtSecurityKeys.Create(_jwtOptions.SigningKey);
 
         var claims = new List<Claim>
         {

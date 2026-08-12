@@ -61,7 +61,7 @@ public enum HeatSourceStatus
 public class ThermalSystemConfiguration
 {
     public Guid Id { get; private set; }
-    public Guid EngineeringSystemId { get; private set; }
+    public EngineeringSystemId EngineeringSystemId { get; private set; }
 
     // Heating
     public double DesignSupplyTemperature { get; private set; }
@@ -110,7 +110,7 @@ public class ThermalSystemConfiguration
         bool hasBufferTank = false, double bufferTankVolume = 0,
         bool hasDHW = false)
     {
-        Id = Guid.NewGuid(); EngineeringSystemId = engineeringSystemId;
+        Id = Guid.NewGuid(); EngineeringSystemId = EngineeringSystemId.From(engineeringSystemId);
         DesignSupplyTemperature = designSupplyTemp;
         DesignReturnTemperature = designReturnTemp;
         MinimumSupplyTemperature = minSupplyTemp;

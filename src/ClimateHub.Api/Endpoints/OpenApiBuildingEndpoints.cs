@@ -25,6 +25,20 @@ public static class OpenApiBuildingEndpoints
             var handler = ctx.RequestServices.GetRequiredService<CreateBuildingHandler>();
             var cmd = new CreateBuildingCommand { Name = body.Name, Address = body.Address };
             var result = await handler.HandleAsync(cmd, ct);
+
+            var userIdClaim = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdClaim, out var creatorId) && Guid.TryParse(result.Id, out var buildingGuid))
+            {
+                var grantRepo = ctx.RequestServices
+                    .GetRequiredService<ClimateHub.Modules.IAM.Domain.IBuildingAccessGrantRepository>();
+                var hasGrant = await grantRepo.HasAccessAsync(creatorId, buildingGuid, ct);
+                if (!hasGrant)
+                    await grantRepo.AddAsync(
+                        new ClimateHub.Modules.IAM.Domain.BuildingAccessGrant(
+                            creatorId, buildingGuid, creatorId),
+                        ct);
+            }
+
             return Results.Created($"/api/v1/buildings/{result.Id}", result);
         }).RequirePermission("building_configure");
 

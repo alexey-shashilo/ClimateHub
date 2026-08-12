@@ -22,5 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClimateHub.Api\ClimateHub.Api.csproj" />
+    <ProjectReference Include="..\..\src\ClimateHub.DeviceGateway\ClimateHub.DeviceGateway.csproj" />
+    <ProjectReference Include="..\..\tools\ClimateHub.Migrator\ClimateHub.Migrator.csproj" />
   </ItemGroup>
 </Project>

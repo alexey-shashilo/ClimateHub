@@ -19,12 +19,12 @@ public class CapabilityRouter
     {
         var engCapability = EngineeringCapabilityCodes.GetEngCapability(needType);
         if (engCapability is null)
-            return new CapabilityRoutingResult(null, EngineeringErrors.EngineeringCapabilityNotFound, 
+            return new CapabilityRoutingResult(null, EngineeringErrors.EngineeringCapabilityNotFound,
                 $"No engineering capability mapping for need type {needType}");
 
         var systems = await _systemRepo.GetByCapabilityAsync(engCapability, ct);
         if (systems.Count == 0)
-            return new CapabilityRoutingResult(null, EngineeringErrors.EngineeringCapabilityNotFound, 
+            return new CapabilityRoutingResult(null, EngineeringErrors.EngineeringCapabilityNotFound,
                 $"No engineering system supports {engCapability}");
 
         var candidates = systems
@@ -38,7 +38,7 @@ public class CapabilityRouter
         if (candidates.Count == 0)
         {
             var hasSystemButNotCovering = systems.Any(s => s.Lifecycle == LifecycleStatus.Active);
-            return new CapabilityRoutingResult(null, 
+            return new CapabilityRoutingResult(null,
                 hasSystemButNotCovering ? EngineeringErrors.RoomNotCovered : EngineeringErrors.EngineeringSystemUnavailable,
                 "All capable systems are disabled or don't cover this room");
         }
@@ -50,17 +50,17 @@ public class CapabilityRouter
         }
 
         var selected = candidates[0];
-        
+
         var coveringZone = selected.Zones
             .Where(z => z.ZoneRooms.Any(zr => zr.RoomId == roomId && zr.Enabled))
             .OrderBy(z => z.Priority)
             .FirstOrDefault();
-        
+
         if (coveringZone is not null && coveringZone.PreferredEngineeringSystemId.HasValue && coveringZone.PreferredEngineeringSystemId.Value != selected.Id)
         {
             var preferred = await _systemRepo.GetByIdAsync(coveringZone.PreferredEngineeringSystemId.Value, ct);
-            if (preferred is not null && 
-                preferred.Lifecycle == LifecycleStatus.Active && 
+            if (preferred is not null &&
+                preferred.Lifecycle == LifecycleStatus.Active &&
                 preferred.OperationalStatus == OperationalStatus.Available &&
                 preferred.HasCapability(engCapability))
             {
@@ -172,7 +172,7 @@ public class StrategyEngine
         {
             var fanPct = MapAirflowToFanPercent(requestedValue);
             var damperPct = MapAirflowToDamperPercent(requestedValue);
-            
+
             return new List<CommandPlanStep>
             {
                 new("control.damper-position", "set", damperPct, "percent", deviceRole: DeviceRole.SupplyDamper, sequence: 0),

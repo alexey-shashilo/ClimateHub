@@ -315,6 +315,7 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
             e.Property(x => x.LifecycleStatus).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.ControlMode).HasMaxLength(30);
+            e.Property(x => x.CircuitId).HasConversion(v => v!.Value.Value, v => HydraulicCircuitId.From(v));
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.CircuitId);
         });
@@ -326,6 +327,7 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Property(x => x.Id).HasConversion(v => v.Value, v => CirculationPumpId.From(v)).ValueGeneratedNever();
             e.Property(x => x.EngineeringSystemId).HasConversion(v => v.Value, v => EngineeringSystemId.From(v));
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.CircuitId).HasConversion(v => v!.Value.Value, v => HydraulicCircuitId.From(v));
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.CircuitId);
         });
@@ -423,8 +425,8 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
             .Include(x => x.ThermalConfiguration)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (system is null) return null;
-        await ctx.Entry(system).Collection(s => ctx.Set<SystemCapability>().Where(c => c.EngineeringSystemId == system.Id.Value).ToList()).LoadAsync(ct);
-        await ctx.Entry(system).Collection(s => ctx.Set<EngineeringResource>().Where(r => r.EngineeringSystemId == system.Id.Value).ToList()).LoadAsync(ct);
+        await ctx.Entry(system).Collection(s => ctx.Set<SystemCapability>().Where(c => c.EngineeringSystemId == system.Id).ToList()).LoadAsync(ct);
+        await ctx.Entry(system).Collection(s => ctx.Set<EngineeringResource>().Where(r => r.EngineeringSystemId == system.Id).ToList()).LoadAsync(ct);
         return system;
     }
 
@@ -444,7 +446,7 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
         => await ctx.EngineeringSystems
             .Include(x => x.VentilationConfiguration)
             .Include(x => x.ThermalConfiguration)
-            .Where(x => ctx.Set<SystemCapability>().Any(c => c.EngineeringSystemId == x.Id.Value && c.Code == capabilityCode))
+            .Where(x => ctx.Set<SystemCapability>().Any(c => c.EngineeringSystemId == x.Id && c.Code == capabilityCode))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyCollection<EngineeringSystem>> GetAllAsync(CancellationToken ct = default)
@@ -469,8 +471,8 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
     public async Task AddAsync(EngineeringSystem system, CancellationToken ct = default)
     {
         await ctx.EngineeringSystems.AddAsync(system, ct);
-        foreach (var cap in system.Capabilities) cap.EngineeringSystemId = system.Id.Value;
-        foreach (var res in system.Resources) res.EngineeringSystemId = system.Id.Value;
+        foreach (var cap in system.Capabilities) cap.EngineeringSystemId = system.Id;
+        foreach (var res in system.Resources) res.EngineeringSystemId = system.Id;
         await ctx.SaveChangesAsync(ct);
     }
 
@@ -482,8 +484,8 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
 
     public async Task DeleteAsync(EngineeringSystemId id, CancellationToken ct = default)
     {
-        await ctx.Set<SystemCapability>().Where(c => c.EngineeringSystemId == id.Value).ExecuteDeleteAsync(ct);
-        await ctx.Set<EngineeringResource>().Where(r => r.EngineeringSystemId == id.Value).ExecuteDeleteAsync(ct);
+        await ctx.Set<SystemCapability>().Where(c => c.EngineeringSystemId == id).ExecuteDeleteAsync(ct);
+        await ctx.Set<EngineeringResource>().Where(r => r.EngineeringSystemId == id).ExecuteDeleteAsync(ct);
         await ctx.EngineeringSystems.Where(x => x.Id == id).ExecuteDeleteAsync(ct);
     }
 

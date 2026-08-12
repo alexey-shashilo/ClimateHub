@@ -31,8 +31,14 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                     b.Property<Guid?>("ActiveCommandId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ActiveCommandPlanId")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("BuildingId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("CommandAttemptCount")
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("CooldownUntil")
                         .HasColumnType("timestamp with time zone");
@@ -55,17 +61,32 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                     b.Property<double>("Deviation")
                         .HasColumnType("double precision");
 
+                    b.Property<DateTimeOffset?>("EffectEvaluationDueAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("GeneratedByPolicyVersion")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<DateTimeOffset?>("LastCommandCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LastCommandId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("LastEvaluationAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastMeaningfulImprovementAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<int>("PlanningAttemptCount")
+                        .HasColumnType("integer");
 
                     b.Property<string>("PlanningFailureCode")
                         .HasMaxLength(100)
@@ -83,6 +104,12 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
 
                     b.Property<Guid?>("SelectedDeviceId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SelectedEngineeringCapabilityCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SelectedEngineeringSystemId")
+                        .HasColumnType("text");
 
                     b.Property<string>("Severity")
                         .IsRequired()
@@ -113,13 +140,169 @@ namespace ClimateHub.Modules.Needs.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("ViolationSince")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActiveCommandId");
+
+                    b.HasIndex("BuildingId", "Status");
+
                     b.HasIndex("RoomId", "Status");
 
+                    b.HasIndex("RoomId", "Type")
+                        .IsUnique()
+                        .HasFilter("\"Status\" IN ('Detected', 'Planning', 'Planned', 'Executing', 'WaitingForEffect', 'Blocked')");
+
+                    b.HasIndex("Status", "CooldownUntil");
+
+                    b.HasIndex("Status", "EffectEvaluationDueAt");
+
+                    b.HasIndex("Status", "LastEvaluationAt");
+
                     b.ToTable("needs", "needs");
+                });
+
+            modelBuilder.Entity("ClimateHub.Modules.Needs.Domain.NeedEvaluation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CalculationResultJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CapabilityPlanJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CausationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("CommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("DeviceResolutionResultJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EnvironmentSnapshotJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("EvaluatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("NeedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NewStatus")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PolicySnapshotJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvaluatedAt");
+
+                    b.HasIndex("NeedId");
+
+                    b.ToTable("need_evaluations", "needs");
+                });
+
+            modelBuilder.Entity("ClimateHub.Modules.Needs.Domain.RoomParameterEvaluationState", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastEvaluationAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastMeasuredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastQuality")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<double?>("LastValue")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ParameterCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PolicyVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ViolationDirection")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTimeOffset?>("ViolationSince")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastEvaluationAt");
+
+                    b.HasIndex("ViolationSince");
+
+                    b.HasIndex("RoomId", "ParameterCode")
+                        .IsUnique();
+
+                    b.ToTable("room_parameter_evaluation_states", "needs");
                 });
 #pragma warning restore 612, 618
         }

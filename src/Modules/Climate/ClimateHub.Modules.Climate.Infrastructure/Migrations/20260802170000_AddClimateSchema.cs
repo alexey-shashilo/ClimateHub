@@ -1,9 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace ClimateHub.Modules.Climate.Infrastructure.Migrations;
 
+[DbContext(typeof(ClimateHub.Modules.Climate.Infrastructure.ClimateDbContext))]
+[Migration("20260802170000_AddClimateSchema")]
 public partial class AddClimateSchema : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

@@ -31,7 +31,7 @@ public class DHWPlanner
                 DHWPriorityActive = true,
                 PriorityMode = "DhwPriority",
                 Action = "Heating",
-                RequiredHeatingPowerKw = dhw.StorageVolumeLiters * 4.186 / 3600 * 
+                RequiredHeatingPowerKw = dhw.StorageVolumeLiters * 4.186 / 3600 *
                     (dhw.TargetTemperatureC - currentTempC)
             };
         }
@@ -42,7 +42,7 @@ public class DHWPlanner
             DHWPriorityActive = false,
             PriorityMode = "Balanced",
             Action = "Shared",
-            RequiredHeatingPowerKw = dhw.StorageVolumeLiters * 4.186 / 3600 * 
+            RequiredHeatingPowerKw = dhw.StorageVolumeLiters * 4.186 / 3600 *
                 (dhw.TargetTemperatureC - currentTempC)
         };
     }

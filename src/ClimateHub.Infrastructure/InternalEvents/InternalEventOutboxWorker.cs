@@ -27,26 +27,14 @@ public delegate Task InternalEventHandler(InternalEventEnvelope envelope, Cancel
 public class InternalEventDispatcher
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly InternalEventOutboxRepository _outboxRepo;
-    private readonly InternalEventInboxRepository _inboxRepo;
-    private readonly SseEventLogRepository _sseRepo;
-    private readonly IOptions<InternalEventsOptions> _options;
     private readonly ILogger<InternalEventDispatcher> _logger;
     private readonly Dictionary<string, List<InternalEventHandler>> _handlers = new();
 
     public InternalEventDispatcher(
         IServiceScopeFactory scopeFactory,
-        InternalEventOutboxRepository outboxRepo,
-        InternalEventInboxRepository inboxRepo,
-        SseEventLogRepository sseRepo,
-        IOptions<InternalEventsOptions> options,
         ILogger<InternalEventDispatcher> logger)
     {
         _scopeFactory = scopeFactory;
-        _outboxRepo = outboxRepo;
-        _inboxRepo = inboxRepo;
-        _sseRepo = sseRepo;
-        _options = options;
         _logger = logger;
     }
 

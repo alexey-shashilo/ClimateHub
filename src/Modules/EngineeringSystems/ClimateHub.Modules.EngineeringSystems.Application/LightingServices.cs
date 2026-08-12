@@ -249,9 +249,12 @@ public class LightingStrategyEngine
             }
             return new LightingStrategyResult
             {
-                TargetBrightnessLux = 0, DimmerLevelPct = 0,
-                LightsOn = false, AppliedScene = "Away",
-                SolarPosition = solar, Steps = vacSteps
+                TargetBrightnessLux = 0,
+                DimmerLevelPct = 0,
+                LightsOn = false,
+                AppliedScene = "Away",
+                SolarPosition = solar,
+                Steps = vacSteps
             };
         }
 
@@ -275,10 +278,13 @@ public class LightingStrategyEngine
             {
                 return new LightingStrategyResult
                 {
-                    TargetBrightnessLux = 0, DimmerLevelPct = 0,
-                    ColorTemperatureK = cct, LightsOn = false,
+                    TargetBrightnessLux = 0,
+                    DimmerLevelPct = 0,
+                    ColorTemperatureK = cct,
+                    LightsOn = false,
                     AppliedScene = activeScene?.SceneType.ToString() ?? "Daylight",
-                    Daylight = daylight, SolarPosition = solar,
+                    Daylight = daylight,
+                    SolarPosition = solar,
                     Steps = new List<CommandPlanStep>()
                 };
             }
@@ -319,10 +325,13 @@ public class LightingStrategyEngine
         {
             TargetBrightnessLux = Math.Round(targetBrightness, 0),
             DimmerLevelPct = Math.Round(dimmerLevel, 0),
-            ColorTemperatureK = cct, LightsOn = dimmerLevel > 0,
+            ColorTemperatureK = cct,
+            LightsOn = dimmerLevel > 0,
             AppliedScene = activeScene?.SceneType.ToString() ?? period,
-            SolarProtection = protection, Daylight = daylight,
-            SolarPosition = solar, Steps = steps
+            SolarProtection = protection,
+            Daylight = daylight,
+            SolarPosition = solar,
+            Steps = steps
         };
     }
 }

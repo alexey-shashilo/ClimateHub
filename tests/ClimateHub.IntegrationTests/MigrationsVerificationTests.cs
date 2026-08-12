@@ -45,26 +45,24 @@ public class MigrationsVerificationTests : IAsyncLifetime
         await conn.OpenAsync();
 
         var tablesBefore = await GetTableNames(conn);
-        Assert.DoesNotContain("__EFMigrationsHistory", tablesBefore);
+        Assert.DoesNotContain("building.buildings", tablesBefore);
+        Assert.DoesNotContain("platform.internal_event_outbox", tablesBefore);
 
-        var schemaDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src");
-        var scriptFiles = Directory.GetFiles(schemaDir, "*.sql", SearchOption.AllDirectories);
-        if (scriptFiles.Length > 0)
-        {
-            foreach (var file in scriptFiles.OrderBy(f => f))
-            {
-                var sql = await File.ReadAllTextAsync(file);
-                if (!string.IsNullOrWhiteSpace(sql))
-                {
-                    await using var cmd = conn.CreateCommand();
-                    cmd.CommandText = sql;
-                    await cmd.ExecuteNonQueryAsync();
-                }
-            }
-        }
+        await ClimateHub.Migrator.MigrationRunner.ApplyAllAsync(_connectionString);
 
         var tablesAfter = await GetTableNames(conn);
         Assert.NotEmpty(tablesAfter);
+
+        // All bounded-context schemas required at runtime must be materialized.
+        Assert.Contains("building.buildings", tablesAfter);
+        Assert.Contains("device.devices", tablesAfter);
+        Assert.Contains("environment.room_parameters", tablesAfter);
+        Assert.Contains("needs.needs", tablesAfter);
+        Assert.Contains("iam.users", tablesAfter);
+        Assert.Contains("climate.climate_plans", tablesAfter);
+        Assert.Contains("command.commands", tablesAfter);
+        Assert.Contains("platform.internal_event_outbox", tablesAfter);
+        Assert.Contains("audit.audit_events", tablesAfter);
     }
 
     [Fact]
