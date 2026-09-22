@@ -115,6 +115,7 @@ jobs:
         env:
           TESTCONTAINERS_RYUK_DISABLED: ""
           RECOVERY_PG_CONNECTION: "Host=localhost;Port=5432;Database=climate_hub_recovery;Username=climate_hub;Password=climate_hub_recovery;"
+          Postgres__ConnectionString: "Host=localhost;Port=5432;Database=climate_hub_recovery;Username=climate_hub;Password=climate_hub_recovery;"
           RECOVERY_MQTT_PORT: "1883"
       - name: Upload TRX + diagnostics
         if: always()
