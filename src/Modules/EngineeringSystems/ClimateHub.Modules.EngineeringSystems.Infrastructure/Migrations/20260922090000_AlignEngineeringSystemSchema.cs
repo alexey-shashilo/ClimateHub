@@ -13,10 +13,10 @@ namespace ClimateHub.Modules.EngineeringSystems.Infrastructure.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>("Lifecycle", "engineering_systems", "engineering", type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Active");
-            migrationBuilder.AddColumn<string>("OperationalStatus", "engineering_systems", "engineering", type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Unknown");
-            migrationBuilder.AddColumn<DateTimeOffset>("CreatedAt", "engineering_systems", "engineering", type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP");
-            migrationBuilder.AddColumn<DateTimeOffset>("UpdatedAt", "engineering_systems", "engineering", type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP");
+            migrationBuilder.AddColumn<string>(name: "Lifecycle", table: "engineering_systems", schema: "engineering", type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Active");
+            migrationBuilder.AddColumn<string>(name: "OperationalStatus", table: "engineering_systems", schema: "engineering", type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Unknown");
+            migrationBuilder.AddColumn<DateTimeOffset>(name: "CreatedAt", table: "engineering_systems", schema: "engineering", type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP");
+            migrationBuilder.AddColumn<DateTimeOffset>(name: "UpdatedAt", table: "engineering_systems", schema: "engineering", type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
