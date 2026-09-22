@@ -72,6 +72,19 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         MqttPort = _mqttContainer.GetMappedPublicPort(1883);
         InfluxDbUrl = $"http://localhost:{_influxDbContainer.GetMappedPublicPort(8086)}";
 
+        // EndToEndFixture runs in the same test process and sets process-level
+        // configuration. Refresh it here so the production fixture never reuses
+        // ports from containers that have already been disposed.
+        Environment.SetEnvironmentVariable("Postgres__ConnectionString", PostgresConnectionString);
+        Environment.SetEnvironmentVariable("Mqtt__Host", MqttHost);
+        Environment.SetEnvironmentVariable("Mqtt__Port", MqttPort.ToString());
+        Environment.SetEnvironmentVariable("InfluxDb__Url", InfluxDbUrl);
+        Environment.SetEnvironmentVariable("InfluxDb__Token", InfluxDbToken);
+        Environment.SetEnvironmentVariable("InfluxDb__Organization", "climate-hub");
+        Environment.SetEnvironmentVariable("InfluxDb__Bucket", "climate-hub");
+
+        await ClimateHub.Migrator.MigrationRunner.ApplyAllAsync(PostgresConnectionString);
+
         ApiClient = CreateAuthenticatedClient();
         AdminMqttClient = await ConnectAdminMqttClient();
         await StartGatewayAsync();
