@@ -69,8 +69,8 @@ public class RuntimeRestartRecoveryTests
 
         private static string GenerateToken()
         {
-            var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes("test-signing-key-that-is-at-least-32-characters-long"));
+            var key = ClimateHub.Modules.IAM.Domain.JwtSecurityKeys.Create(
+                "test-signing-key-that-is-at-least-32-characters-long");
             var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(
                 key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
             var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
