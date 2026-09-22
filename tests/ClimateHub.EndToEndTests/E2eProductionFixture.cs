@@ -64,6 +64,8 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
     public async Task InitializeAsync()
     {
+        // The two E2E fixture classes share process-wide configuration, so do not run
+        // their collections concurrently. Each fixture must own the active ports.
         await _postgresContainer.StartAsync();
         await _mqttContainer.StartAsync();
         await _influxDbContainer.StartAsync();
