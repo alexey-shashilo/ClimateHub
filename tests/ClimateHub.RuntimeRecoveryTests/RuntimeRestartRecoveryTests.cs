@@ -46,13 +46,13 @@ public class RuntimeRestartRecoveryTests
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseSetting("Jwt:SigningKey", "test-signing-key-that-is-at-least-32-characters-long");
-            builder.UseSetting("Jwt:Issuer", "ClimateHub");
-            builder.UseSetting("Jwt:Audience", "ClimateHub.Api");
             builder.ConfigureAppConfiguration((context, config) =>
             {
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
+                    ["Jwt:SigningKey"] = "test-signing-key-that-is-at-least-32-characters-long",
+                    ["Jwt:Issuer"] = "ClimateHub",
+                    ["Jwt:Audience"] = "ClimateHub.Api",
                     ["Postgres:ConnectionString"] = _cs,
                     ["Mqtt:Host"] = _mqttHost,
                     ["Mqtt:Port"] = _mqttPort.ToString(),
