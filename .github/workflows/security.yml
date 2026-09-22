@@ -29,7 +29,14 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Check Vulnerabilities
-        run: dotnet list package --vulnerable --include-transitive
+        shell: bash
+        run: |
+          report="$(dotnet list package --vulnerable --include-transitive)"
+          echo "$report"
+          if grep -q "has the following vulnerable packages" <<< "$report"; then
+            echo "Vulnerable NuGet packages detected"
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
