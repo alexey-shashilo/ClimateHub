@@ -171,6 +171,10 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
         if (AdminMqttClient?.IsConnected == true)
             await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose();
+
+        // Stop the API host and its background workers before removing the
+        // infrastructure they are connected to.
+        await base.DisposeAsync();
         await _influxDbContainer.DisposeAsync();
         await _mqttContainer.DisposeAsync();
         await _postgresContainer.DisposeAsync();
