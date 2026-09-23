@@ -200,6 +200,14 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         await StopGatewayAsync();
         if (AdminMqttClient?.IsConnected == true) await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose(); ApiClient?.Dispose();
+
+        // Stop the in-process API and all hosted workers before tearing down
+        // PostgreSQL, MQTT and InfluxDB. Otherwise workers leak into the next
+        // fixture and reconnect with colliding MQTT client identifiers.
+        await base.DisposeAsync();
+        await _influxDbContainer.DisposeAsync();
+        await _mqttContainer.DisposeAsync();
+        await _postgresContainer.DisposeAsync();
     }
 
     public override async ValueTask DisposeAsync() { await ((IAsyncLifetime)this).DisposeAsync(); }
