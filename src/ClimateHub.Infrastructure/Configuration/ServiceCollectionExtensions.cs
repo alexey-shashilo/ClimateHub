@@ -28,6 +28,21 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddInternalEventInfrastructure(this IServiceCollection services, string connectionString)
     {
+        services.AddInternalEventPersistence(connectionString);
+
+        services.AddSingleton<InternalEventDispatcher>();
+
+        services.AddOptions<InternalEventsOptions>()
+            .BindConfiguration(InternalEventsOptions.SectionName)
+            .ValidateDataAnnotations();
+
+        services.AddHostedService<InternalEventOutboxWorker>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddInternalEventPersistence(this IServiceCollection services, string connectionString)
+    {
         services.AddDbContext<InternalEventsDbContext>((sp, options) =>
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsHistoryTable("__ef_migrations_history", "platform")
@@ -38,16 +53,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<InternalEventInboxRepository>();
         services.AddScoped<SseEventLogRepository>();
         services.AddScoped<RoomEvaluationLock>();
-        services.AddScoped<InternalEventOutboxRepository>();
-        services.AddScoped<InternalEventInboxRepository>();
-        services.AddScoped<SseEventLogRepository>();
-        services.AddSingleton<InternalEventDispatcher>();
-
-        services.AddOptions<InternalEventsOptions>()
-            .BindConfiguration(InternalEventsOptions.SectionName)
-            .ValidateDataAnnotations();
-
-        services.AddHostedService<InternalEventOutboxWorker>();
 
         return services;
     }
