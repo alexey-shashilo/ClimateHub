@@ -64,8 +64,6 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
 
     public async Task InitializeAsync()
     {
-        // The two E2E fixture classes share process-wide configuration, so do not run
-        // their collections concurrently. Each fixture must own the active ports.
         await _postgresContainer.StartAsync();
         await _mqttContainer.StartAsync();
         await _influxDbContainer.StartAsync();
@@ -73,19 +71,6 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         PostgresConnectionString = $"Host=localhost;Port={_postgresContainer.GetMappedPublicPort(5432)};Database=climate_hub_e2e;Username=climate_hub;Password=climate_hub_e2e;";
         MqttPort = _mqttContainer.GetMappedPublicPort(1883);
         InfluxDbUrl = $"http://localhost:{_influxDbContainer.GetMappedPublicPort(8086)}";
-
-        // EndToEndFixture runs in the same test process and sets process-level
-        // configuration. Refresh it here so the production fixture never reuses
-        // ports from containers that have already been disposed.
-        Environment.SetEnvironmentVariable("Postgres__ConnectionString", PostgresConnectionString);
-        Environment.SetEnvironmentVariable("Mqtt__Host", MqttHost);
-        Environment.SetEnvironmentVariable("Mqtt__Port", MqttPort.ToString());
-        Environment.SetEnvironmentVariable("InfluxDb__Url", InfluxDbUrl);
-        Environment.SetEnvironmentVariable("InfluxDb__Token", InfluxDbToken);
-        Environment.SetEnvironmentVariable("InfluxDb__Organization", "climate-hub");
-        Environment.SetEnvironmentVariable("InfluxDb__Bucket", "climate-hub");
-
-        await ClimateHub.Migrator.MigrationRunner.ApplyAllAsync(PostgresConnectionString);
 
         ApiClient = CreateAuthenticatedClient();
         AdminMqttClient = await ConnectAdminMqttClient();
@@ -140,13 +125,11 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         });
 
         builder.Services.AddClimateHubInfrastructure();
+        builder.Services.AddInternalEventPersistence(PostgresConnectionString);
         builder.Services.AddBuildingModule(PostgresConnectionString);
         builder.Services.AddDevicesModule(PostgresConnectionString);
         builder.Services.AddEnvironmentModule(PostgresConnectionString);
         builder.Services.AddCommandsModule(PostgresConnectionString);
-        builder.Services.AddNeedsModule(PostgresConnectionString);
-        builder.Services.AddClimateModule(PostgresConnectionString);
-        builder.Services.AddEngineeringSystemsModule(PostgresConnectionString);
         builder.Services.AddScoped<ClimateHub.DeviceGateway.Services.TelemetryIngestionHandler>();
         builder.Services.AddScoped<ClimateHub.DeviceGateway.Services.CommandEventConsumer>();
         builder.Services.AddHostedService<ClimateHub.DeviceGateway.DeviceGatewayWorker>();
@@ -200,14 +183,6 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         await StopGatewayAsync();
         if (AdminMqttClient?.IsConnected == true) await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose(); ApiClient?.Dispose();
-
-        // Stop the in-process API and all hosted workers before tearing down
-        // PostgreSQL, MQTT and InfluxDB. Otherwise workers leak into the next
-        // fixture and reconnect with colliding MQTT client identifiers.
-        await base.DisposeAsync();
-        await _influxDbContainer.DisposeAsync();
-        await _mqttContainer.DisposeAsync();
-        await _postgresContainer.DisposeAsync();
     }
 
     public override async ValueTask DisposeAsync() { await ((IAsyncLifetime)this).DisposeAsync(); }
