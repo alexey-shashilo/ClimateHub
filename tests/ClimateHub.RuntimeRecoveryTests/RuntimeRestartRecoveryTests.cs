@@ -76,6 +76,9 @@ public class RuntimeRestartRecoveryTests
             var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
                 issuer: "ClimateHub", audience: "ClimateHub.Api",
                 claims: new[] {
+                    new System.Security.Claims.Claim(
+                        System.Security.Claims.ClaimTypes.NameIdentifier,
+                        "11111111-1111-1111-1111-111111111111"),
                     new System.Security.Claims.Claim("permission", "building_read"),
                     new System.Security.Claims.Claim("permission", "building_configure"),
                     new System.Security.Claims.Claim("permission", "device_read"),
