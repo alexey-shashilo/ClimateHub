@@ -19,6 +19,7 @@ try
         ?? throw new InvalidOperationException("Postgres:ConnectionString is required");
 
     builder.Services.AddClimateHubInfrastructure();
+    builder.Services.AddInternalEventPersistence(postgresConnectionString);
     builder.Services.AddBuildingModule(postgresConnectionString);
     builder.Services.AddDevicesModule(postgresConnectionString);
     builder.Services.AddEnvironmentModule(postgresConnectionString);
