@@ -85,7 +85,7 @@ public static class EngineeringSystemsEndpoints
             var activePlans = await planRepo.GetBySystemAsync(EngineeringSystemId.From(guid), ct);
             return Results.Ok(new
             {
-                system.Id,
+                Id = system.Id.ToString(),
                 system.Name,
                 system.SystemType,
                 Lifecycle = system.Lifecycle.ToString(),
@@ -167,8 +167,8 @@ public static class EngineeringSystemsEndpoints
 
     public static object MapToDto(EngineeringSystem s) => new
     {
-        s.Id,
-        s.BuildingId,
+        Id = s.Id.ToString(),
+        BuildingId = s.BuildingId.ToString(),
         s.Name,
         SystemType = s.SystemType.ToString(),
         Lifecycle = s.Lifecycle.ToString(),
