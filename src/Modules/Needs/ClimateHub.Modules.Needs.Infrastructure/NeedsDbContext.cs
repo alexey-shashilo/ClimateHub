@@ -91,6 +91,13 @@ public class RoomParameterEvaluationStateRepository(NeedsDbContext ctx) : IRoomP
         => await ctx.RoomParameterEvaluationStates.FirstOrDefaultAsync(
             x => x.RoomId == roomId && x.ParameterCode == parameterCode, ct);
 
+    public async Task<IReadOnlyCollection<RoomId>> GetRoomsWithPendingViolationsAsync(CancellationToken ct = default)
+        => await ctx.RoomParameterEvaluationStates
+            .Where(x => x.ViolationSince != null)
+            .Select(x => x.RoomId)
+            .Distinct()
+            .ToListAsync(ct);
+
     public async Task AddAsync(RoomParameterEvaluationState state, CancellationToken ct = default)
     {
         await ctx.RoomParameterEvaluationStates.AddAsync(state, ct);
