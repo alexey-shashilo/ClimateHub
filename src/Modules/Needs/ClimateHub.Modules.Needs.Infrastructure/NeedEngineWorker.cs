@@ -56,11 +56,16 @@ public class NeedEngineWorker : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var needRepo = scope.ServiceProvider.GetRequiredService<INeedRepository>();
+                var evalStateRepo = scope.ServiceProvider.GetRequiredService<IRoomParameterEvaluationStateRepository>();
                 var evalService = scope.ServiceProvider.GetRequiredService<NeedEvaluationService>();
 
                 // Reconciliation: scan all rooms with active needs that require processing
                 var pendingNeeds = await needRepo.GetNeedsPendingReconciliationAsync(stoppingToken);
-                var roomsToEvaluate = pendingNeeds.Select(n => n.RoomId).Distinct().ToList();
+                var roomsWithPendingViolations = await evalStateRepo.GetRoomsWithPendingViolationsAsync(stoppingToken);
+                var roomsToEvaluate = pendingNeeds.Select(n => n.RoomId)
+                    .Concat(roomsWithPendingViolations)
+                    .Distinct()
+                    .ToList();
 
                 foreach (var roomId in roomsToEvaluate)
                 {
