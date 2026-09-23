@@ -55,9 +55,7 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Property(x => x.CreatedAt);
             e.Property(x => x.UpdatedAt);
             e.Property(x => x.Description).HasMaxLength(500);
-            e.Ignore(x => x.Capabilities);
             e.Ignore(x => x.DeviceBindings);
-            e.Ignore(x => x.Resources);
             e.Ignore(x => x.Zones);
             e.Ignore(x => x.HeatSources);
             e.Ignore(x => x.HydraulicCircuits);
@@ -82,8 +80,8 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Ignore(x => x.LightingConfiguration);
             e.Ignore(x => x.DomainEvents);
 
-            e.HasMany<SystemCapability>().WithOne().HasForeignKey("EngineeringSystemId");
-            e.HasMany<EngineeringResource>().WithOne().HasForeignKey("EngineeringSystemId");
+            e.HasMany(x => x.Capabilities).WithOne().HasForeignKey(x => x.EngineeringSystemId);
+            e.HasMany(x => x.Resources).WithOne().HasForeignKey(x => x.EngineeringSystemId);
 
             e.HasIndex(x => x.BuildingId);
             e.HasIndex(x => x.SystemType);
@@ -424,10 +422,9 @@ public class EngineeringSystemRepository(EngineeringSystemsDbContext ctx) : IEng
         var system = await ctx.EngineeringSystems
             .Include(x => x.VentilationConfiguration)
             .Include(x => x.ThermalConfiguration)
+            .Include(x => x.Capabilities)
+            .Include(x => x.Resources)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (system is null) return null;
-        await ctx.Entry(system).Collection(s => ctx.Set<SystemCapability>().Where(c => c.EngineeringSystemId == system.Id).ToList()).LoadAsync(ct);
-        await ctx.Entry(system).Collection(s => ctx.Set<EngineeringResource>().Where(r => r.EngineeringSystemId == system.Id).ToList()).LoadAsync(ct);
         return system;
     }
 
