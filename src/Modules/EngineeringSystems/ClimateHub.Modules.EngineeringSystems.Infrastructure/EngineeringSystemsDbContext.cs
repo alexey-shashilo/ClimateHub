@@ -46,6 +46,7 @@ public class EngineeringSystemsDbContext(DbContextOptions<EngineeringSystemsDbCo
             e.Property(x => x.SystemType).HasConversion<string>().HasMaxLength(50);
 #pragma warning disable CS0618
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.LegacyStatus).HasConversion<string>().HasMaxLength(20);
             e.Ignore(x => x.DeviceIds);
 #pragma warning restore CS0618
             e.Property(x => x.ControlMode).HasConversion<string>().HasMaxLength(20);
