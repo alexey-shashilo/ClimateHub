@@ -18,6 +18,8 @@ namespace ClimateHub.Modules.EngineeringSystems.Infrastructure.Migrations
             migrationBuilder.AddColumn<string>(name: "OperationalStatus", table: "engineering_systems", schema: "engineering", type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Unknown");
             migrationBuilder.AddColumn<DateTimeOffset>(name: "CreatedAt", table: "engineering_systems", schema: "engineering", type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP");
             migrationBuilder.AddColumn<DateTimeOffset>(name: "UpdatedAt", table: "engineering_systems", schema: "engineering", type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP");
+            migrationBuilder.AddColumn<long>(name: "Version", table: "engineering_capabilities", schema: "engineering", type: "bigint", nullable: false, defaultValue: 1L);
+            migrationBuilder.AddColumn<long>(name: "Version", table: "engineering_resources", schema: "engineering", type: "bigint", nullable: false, defaultValue: 1L);
 
             migrationBuilder.CreateTable(
                 name: "ventilation_configurations",
@@ -127,6 +129,8 @@ namespace ClimateHub.Modules.EngineeringSystems.Infrastructure.Migrations
             migrationBuilder.DropColumn("OperationalStatus", "engineering_systems", "engineering");
             migrationBuilder.DropColumn("CreatedAt", "engineering_systems", "engineering");
             migrationBuilder.DropColumn("UpdatedAt", "engineering_systems", "engineering");
+            migrationBuilder.DropColumn("Version", "engineering_capabilities", "engineering");
+            migrationBuilder.DropColumn("Version", "engineering_resources", "engineering");
 
             migrationBuilder.DropIndex("IX_command_plans_NeedId", "command_plans", "engineering");
             migrationBuilder.DropIndex("IX_command_plans_IdempotencyKey", "command_plans", "engineering");
