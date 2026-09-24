@@ -149,6 +149,8 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Jwt:SigningKey"] = "test-signing-key-that-is-at-least-32-characters-long",
                 ["Jwt:Issuer"] = "ClimateHub",
                 ["Jwt:Audience"] = "ClimateHub.Api",
+                ["NeedEngine:AntiOscillation:Co2:MinimumViolationDuration"] = "00:00:00",
+                ["NeedEngine:AntiOscillation:Co2:MinimumSatisfactionDuration"] = "00:00:00",
             });
         });
     }
@@ -171,10 +173,6 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
         if (AdminMqttClient?.IsConnected == true)
             await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose();
-
-        // Stop the API host and its background workers before removing the
-        // infrastructure they are connected to.
-        await base.DisposeAsync();
         await _influxDbContainer.DisposeAsync();
         await _mqttContainer.DisposeAsync();
         await _postgresContainer.DisposeAsync();
