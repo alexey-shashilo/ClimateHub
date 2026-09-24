@@ -72,6 +72,9 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         MqttPort = _mqttContainer.GetMappedPublicPort(1883);
         InfluxDbUrl = $"http://localhost:{_influxDbContainer.GetMappedPublicPort(8086)}";
 
+        System.Environment.SetEnvironmentVariable("Postgres__ConnectionString", PostgresConnectionString);
+        await ClimateHub.Migrator.MigrationRunner.ApplyAllAsync(PostgresConnectionString);
+
         ApiClient = CreateAuthenticatedClient();
         AdminMqttClient = await ConnectAdminMqttClient();
         await StartGatewayAsync();
@@ -102,6 +105,8 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
                 ["InfluxDb:Token"] = InfluxDbToken,
                 ["InfluxDb:Organization"] = "climate-hub",
                 ["InfluxDb:Bucket"] = "climate-hub",
+                ["NeedEngine:AntiOscillation:Co2:MinimumViolationDuration"] = "00:00:00",
+                ["NeedEngine:AntiOscillation:Co2:MinimumSatisfactionDuration"] = "00:00:00",
             });
         });
     }
