@@ -245,12 +245,15 @@ public class Need : Entity<NeedId>, IAggregateRoot
         (NeedStatus.Planning, NeedStatus.Planned) => true,
         (NeedStatus.Planning, NeedStatus.Blocked) => true,
         (NeedStatus.Planning, NeedStatus.Cancelled) => true,
+        (NeedStatus.Planning, NeedStatus.Satisfied) => true,
         (NeedStatus.Planned, NeedStatus.Executing) => true,
         (NeedStatus.Planned, NeedStatus.Blocked) => true,
         (NeedStatus.Planned, NeedStatus.Cancelled) => true,
+        (NeedStatus.Planned, NeedStatus.Satisfied) => true,
         (NeedStatus.Executing, NeedStatus.WaitingForEffect) => true,
         (NeedStatus.Executing, NeedStatus.Blocked) => true,
         (NeedStatus.Executing, NeedStatus.Cancelled) => true,
+        (NeedStatus.Executing, NeedStatus.Satisfied) => true,
         (NeedStatus.WaitingForEffect, NeedStatus.Satisfied) => true,
         (NeedStatus.WaitingForEffect, NeedStatus.Executing) => true,
         (NeedStatus.WaitingForEffect, NeedStatus.Blocked) => true,
@@ -258,6 +261,7 @@ public class Need : Entity<NeedId>, IAggregateRoot
         (NeedStatus.Blocked, NeedStatus.Detected) => true,
         (NeedStatus.Blocked, NeedStatus.Cancelled) => true,
         (NeedStatus.Blocked, NeedStatus.Expired) => true,
+        (NeedStatus.Blocked, NeedStatus.Satisfied) => true,
         (NeedStatus.Satisfied, NeedStatus.Expired) => true,
         _ => false
     };
