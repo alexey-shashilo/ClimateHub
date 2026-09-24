@@ -141,7 +141,6 @@ public class NeedsRepository(NeedsDbContext ctx) : INeedRepository
             n.Status == NeedStatus.Executing || n.Status == NeedStatus.WaitingForEffect || n.Status == NeedStatus.Blocked)
             .Where(n => n.CooldownUntil == null || n.CooldownUntil <= now)
             .Where(n => n.EffectEvaluationDueAt == null || n.EffectEvaluationDueAt <= now)
-            .Where(n => n.LastEvaluationAt == null || n.LastEvaluationAt <= now.AddMinutes(-2))
             .OrderByDescending(n => n.Severity).Select(n => ToDto(n)).ToListAsync(ct);
     }
 
