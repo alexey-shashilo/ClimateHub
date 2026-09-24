@@ -56,10 +56,14 @@ public class EngineeringSystemsModuleService : IEngineeringSystemsModule
 
         return family switch
         {
-            EngineeringCapabilityFamily.Ventilation => await _ventilationPlanning.PlanVentilationAsync(request, system, cancellationToken),
-            EngineeringCapabilityFamily.Thermal => await _thermalPlanning.PlanThermalAsync(request, system, cancellationToken),
-            EngineeringCapabilityFamily.Humidification => await _humidificationPlanning.PlanHumidificationAsync(request, system, cancellationToken),
-            EngineeringCapabilityFamily.Lighting => await _lightingPlanning.PlanLightingAsync(request, system, cancellationToken),
+            EngineeringCapabilityFamily.Ventilation when system.VentilationConfiguration is not null
+                => await _ventilationPlanning.PlanVentilationAsync(request, system, cancellationToken),
+            EngineeringCapabilityFamily.Thermal when system.ThermalConfiguration is not null
+                => await _thermalPlanning.PlanThermalAsync(request, system, cancellationToken),
+            EngineeringCapabilityFamily.Humidification when system.HumidificationConfiguration is not null
+                => await _humidificationPlanning.PlanHumidificationAsync(request, system, cancellationToken),
+            EngineeringCapabilityFamily.Lighting when system.LightingConfiguration is not null
+                => await _lightingPlanning.PlanLightingAsync(request, system, cancellationToken),
             _ => await _standardPlanning.PlanStandardAsync(request, system, routing, cancellationToken)
         };
     }

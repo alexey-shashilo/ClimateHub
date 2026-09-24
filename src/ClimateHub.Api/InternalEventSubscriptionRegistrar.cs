@@ -52,9 +52,9 @@ public class InternalEventSubscriptionRegistrar : IHostedService
 
     private static RoomEnvironmentStateChangedEvent? ParseEnvironmentStateChanged(InternalEventEnvelope envelope)
     {
-        if (envelope.RoomId is null) return null;
+        if (envelope.RoomId is null || envelope.BuildingId is null) return null;
 
-        var buildingId = envelope.BuildingId.HasValue ? BuildingId.From(envelope.BuildingId.Value) : BuildingId.From(Guid.Empty);
+        var buildingId = BuildingId.From(envelope.BuildingId.Value);
         var changed = new List<string>();
         var measuredAt = envelope.OccurredAt;
         var receivedAt = envelope.OccurredAt;

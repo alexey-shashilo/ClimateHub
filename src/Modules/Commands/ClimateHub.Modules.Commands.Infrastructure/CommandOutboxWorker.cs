@@ -29,9 +29,10 @@ public class CommandOutboxWorker : BackgroundService
 
         var factory = new MqttClientFactory();
         _mqttClient = factory.CreateMqttClient();
+        var clientIdPrefix = _mqttOptions.Value.ClientId ?? "climate-hub";
         var opts = new MqttClientOptionsBuilder()
             .WithTcpServer(_mqttOptions.Value.Host, _mqttOptions.Value.Port)
-            .WithClientId(_mqttOptions.Value.ClientId ?? "climate-hub-command-outbox")
+            .WithClientId($"{clientIdPrefix}-command-outbox")
             .WithCleanSession().Build();
 
         await ConnectWithRetryAsync(opts, stoppingToken);

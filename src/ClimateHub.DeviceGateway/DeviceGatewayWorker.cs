@@ -15,6 +15,7 @@ public class DeviceGatewayWorker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly Channel<(string topic, string payload, string type)> _telemetryChannel;
     private readonly Channel<(string topic, string payload, string type)> _commandChannel;
+    private readonly SemaphoreSlim _connectLock = new(1, 1);
     private IMqttClient? _mqttClient;
     private const int ChannelCapacity = 1000;
 
@@ -105,17 +106,35 @@ public class DeviceGatewayWorker : BackgroundService
 
     private async Task ConnectWithRetryAsync(MqttClientOptions options, CancellationToken ct)
     {
-        var delay = _mqttOptions.Value.ReconnectBaseDelayMs;
-        while (!ct.IsCancellationRequested)
+        await _connectLock.WaitAsync(ct);
+        try
         {
-            try
+            if (_mqttClient?.IsConnected == true) return;
+
+            var delay = _mqttOptions.Value.ReconnectBaseDelayMs;
+            while (!ct.IsCancellationRequested)
             {
-                var result = await _mqttClient!.ConnectAsync(options, ct);
-                if (result.ResultCode == MqttClientConnectResultCode.Success) return;
+                try
+                {
+                    var result = await _mqttClient!.ConnectAsync(options, ct);
+                    if (result.ResultCode == MqttClientConnectResultCode.Success) return;
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "MQTT connect failed, retrying in {Delay}ms", delay);
+                }
+
+                await Task.Delay(delay, ct);
+                delay = Math.Min(delay * 2, _mqttOptions.Value.ReconnectMaxDelayMs);
             }
-            catch { _logger.LogWarning("MQTT connect failed, retrying in {Delay}ms", delay); }
-            await Task.Delay(delay, ct);
-            delay = Math.Min(delay * 2, _mqttOptions.Value.ReconnectMaxDelayMs);
+        }
+        finally
+        {
+            _connectLock.Release();
         }
     }
 

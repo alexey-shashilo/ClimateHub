@@ -15,6 +15,7 @@ namespace ClimateHub.EndToEndTests;
 
 public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private bool _resourcesDisposed;
     private readonly IContainer _postgresContainer;
     private readonly IContainer _mqttContainer;
     private readonly IContainer _influxDbContainer;
@@ -149,6 +150,8 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Jwt:SigningKey"] = "test-signing-key-that-is-at-least-32-characters-long",
                 ["Jwt:Issuer"] = "ClimateHub",
                 ["Jwt:Audience"] = "ClimateHub.Api",
+                ["NeedEngine:AntiOscillation:Co2:MinimumViolationDuration"] = "00:00:00",
+                ["NeedEngine:AntiOscillation:Co2:MinimumSatisfactionDuration"] = "00:00:00",
             });
         });
     }
@@ -166,8 +169,11 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
         return client;
     }
 
-    async Task IAsyncLifetime.DisposeAsync()
+    private async Task DisposeResourcesAsync()
     {
+        if (_resourcesDisposed) return;
+        _resourcesDisposed = true;
+
         if (AdminMqttClient?.IsConnected == true)
             await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose();
@@ -178,6 +184,9 @@ public class EndToEndFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     public override async ValueTask DisposeAsync()
     {
-        await ((IAsyncLifetime)this).DisposeAsync();
+        await base.DisposeAsync();
+        await DisposeResourcesAsync();
     }
+
+    async Task IAsyncLifetime.DisposeAsync() => await DisposeAsync();
 }

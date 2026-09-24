@@ -27,7 +27,9 @@ public static class DependencyInjection
         services.AddScoped<NeedEvaluator>();
         services.AddScoped<NeedEvaluationService>();
         services.AddScoped<INeedModule, NeedModuleService>();
-        services.AddSingleton<AntiOscillationOptions>(_ => AntiOscillationOptions.Default);
+        services.AddOptions<AntiOscillationOptions>()
+            .BindConfiguration(AntiOscillationOptions.SectionName);
+        services.AddSingleton(sp => sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AntiOscillationOptions>>().Value);
         services.AddScoped<NeedDeviceResolver>();
         services.AddScoped<IRoomBuildingResolver, RoomBuildingResolver>();
         services.AddScoped<CommandTerminalEventHandlers>();

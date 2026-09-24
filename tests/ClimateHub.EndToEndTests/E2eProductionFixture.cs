@@ -25,6 +25,7 @@ namespace ClimateHub.EndToEndTests;
 
 public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private bool _resourcesDisposed;
     private readonly IContainer _postgresContainer;
     private readonly IContainer _mqttContainer;
     private readonly IContainer _influxDbContainer;
@@ -72,6 +73,9 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         MqttPort = _mqttContainer.GetMappedPublicPort(1883);
         InfluxDbUrl = $"http://localhost:{_influxDbContainer.GetMappedPublicPort(8086)}";
 
+        System.Environment.SetEnvironmentVariable("Postgres__ConnectionString", PostgresConnectionString);
+        await ClimateHub.Migrator.MigrationRunner.ApplyAllAsync(PostgresConnectionString);
+
         ApiClient = CreateAuthenticatedClient();
         AdminMqttClient = await ConnectAdminMqttClient();
         await StartGatewayAsync();
@@ -102,6 +106,8 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
                 ["InfluxDb:Token"] = InfluxDbToken,
                 ["InfluxDb:Organization"] = "climate-hub",
                 ["InfluxDb:Bucket"] = "climate-hub",
+                ["NeedEngine:AntiOscillation:Co2:MinimumViolationDuration"] = "00:00:00",
+                ["NeedEngine:AntiOscillation:Co2:MinimumSatisfactionDuration"] = "00:00:00",
             });
         });
     }
@@ -125,13 +131,11 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         });
 
         builder.Services.AddClimateHubInfrastructure();
+        builder.Services.AddInternalEventPersistence(PostgresConnectionString);
         builder.Services.AddBuildingModule(PostgresConnectionString);
         builder.Services.AddDevicesModule(PostgresConnectionString);
         builder.Services.AddEnvironmentModule(PostgresConnectionString);
         builder.Services.AddCommandsModule(PostgresConnectionString);
-        builder.Services.AddNeedsModule(PostgresConnectionString);
-        builder.Services.AddClimateModule(PostgresConnectionString);
-        builder.Services.AddEngineeringSystemsModule(PostgresConnectionString);
         builder.Services.AddScoped<ClimateHub.DeviceGateway.Services.TelemetryIngestionHandler>();
         builder.Services.AddScoped<ClimateHub.DeviceGateway.Services.CommandEventConsumer>();
         builder.Services.AddHostedService<ClimateHub.DeviceGateway.DeviceGatewayWorker>();
@@ -180,12 +184,24 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         return client;
     }
 
-    async Task IAsyncLifetime.DisposeAsync()
+    private async Task DisposeResourcesAsync()
     {
+        if (_resourcesDisposed) return;
+        _resourcesDisposed = true;
+
         await StopGatewayAsync();
         if (AdminMqttClient?.IsConnected == true) await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose(); ApiClient?.Dispose();
+        await _influxDbContainer.DisposeAsync();
+        await _mqttContainer.DisposeAsync();
+        await _postgresContainer.DisposeAsync();
     }
 
-    public override async ValueTask DisposeAsync() { await ((IAsyncLifetime)this).DisposeAsync(); }
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await DisposeResourcesAsync();
+    }
+
+    async Task IAsyncLifetime.DisposeAsync() => await DisposeAsync();
 }

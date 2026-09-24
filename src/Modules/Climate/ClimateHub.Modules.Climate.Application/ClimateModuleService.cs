@@ -34,6 +34,8 @@ public class ClimateModuleService : IClimateModule
         var parsedProfile = Enum.TryParse<StrategyProfile>(profile, true, out var p)
             ? p : StrategyProfile.Comfort;
         var result = await _climatePlanner.CreatePlanAsync(roomId, parsedProfile, ct);
+        if (result.Plan.Status == ClimatePlanStatus.Executing)
+            result = await _climatePlanner.ExecutePlanAsync(result.Plan, roomId, ct);
         return MapToDto(result);
     }
 

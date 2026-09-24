@@ -46,13 +46,13 @@ public class RuntimeRestartRecoveryTests
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseSetting("Jwt:SigningKey", "test-signing-key-that-is-at-least-32-characters-long");
-            builder.UseSetting("Jwt:Issuer", "ClimateHub");
-            builder.UseSetting("Jwt:Audience", "ClimateHub.Api");
             builder.ConfigureAppConfiguration((context, config) =>
             {
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
+                    ["Jwt:SigningKey"] = "test-signing-key-that-is-at-least-32-characters-long",
+                    ["Jwt:Issuer"] = "ClimateHub",
+                    ["Jwt:Audience"] = "ClimateHub.Api",
                     ["Postgres:ConnectionString"] = _cs,
                     ["Mqtt:Host"] = _mqttHost,
                     ["Mqtt:Port"] = _mqttPort.ToString(),
@@ -69,13 +69,16 @@ public class RuntimeRestartRecoveryTests
 
         private static string GenerateToken()
         {
-            var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes("test-signing-key-that-is-at-least-32-characters-long"));
+            var key = ClimateHub.Modules.IAM.Domain.JwtSecurityKeys.Create(
+                "test-signing-key-that-is-at-least-32-characters-long");
             var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(
                 key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
             var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
                 issuer: "ClimateHub", audience: "ClimateHub.Api",
                 claims: new[] {
+                    new System.Security.Claims.Claim(
+                        System.Security.Claims.ClaimTypes.NameIdentifier,
+                        "11111111-1111-1111-1111-111111111111"),
                     new System.Security.Claims.Claim("permission", "building_read"),
                     new System.Security.Claims.Claim("permission", "building_configure"),
                     new System.Security.Claims.Claim("permission", "device_read"),

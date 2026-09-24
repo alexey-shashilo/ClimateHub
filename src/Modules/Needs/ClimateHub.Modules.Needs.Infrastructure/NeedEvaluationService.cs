@@ -134,53 +134,37 @@ public class NeedEvaluationService
         var existingNeed = await _needRepo.GetActiveByTypeAsync(roomId, MapParameterToNeedType(parameter), ct);
         if (existingNeed is null) return;
 
-        if (existingNeed.Status == NeedStatus.WaitingForEffect)
+        existingNeed.SetStableSince();
+        var stableDuration = now - existingNeed.StableSince!.Value;
+        if (stableDuration >= opts.MinimumSatisfactionDuration)
         {
-            existingNeed.SetStableSince();
-            var duration = now - existingNeed.StableSince!.Value;
-            if (duration >= opts.MinimumSatisfactionDuration)
-            {
-                existingNeed.Satisfy();
-                await _needRepo.UpdateAsync(existingNeed, ct);
-                await SaveEvaluationAsync(existingNeed, trigger, "WaitingForEffect", "Satisfied", correlationId, causationId, ct);
-                var eventId = await PublishNeedEventAsync("need.satisfied", existingNeed, correlationId, causationId, ct);
-                _eventBus.Publish(new EnvironmentUpdatedEvent
-                {
-                    RoomId = roomId,
-                    Timestamp = now,
-                    EventType = "need.satisfied",
-                    CorrelationId = correlationId,
-                    CausationId = causationId,
-                    PayloadJson = JsonSerializer.Serialize(new { eventId = eventId.ToString() })
-                });
-                return;
-            }
-            existingNeed.UpdateEvaluation(current, 0, NeedSeverity.Low);
+            var previousStatus = existingNeed.Status.ToString();
+            existingNeed.Satisfy();
             await _needRepo.UpdateAsync(existingNeed, ct);
+            await SaveEvaluationAsync(existingNeed, trigger, previousStatus, "Satisfied", correlationId, causationId, ct);
+            var eventId = await PublishNeedEventAsync("need.satisfied", existingNeed, correlationId, causationId, ct);
             _eventBus.Publish(new EnvironmentUpdatedEvent
             {
                 RoomId = roomId,
                 Timestamp = now,
-                EventType = "need.updated",
+                EventType = "need.satisfied",
                 CorrelationId = correlationId,
-                CausationId = causationId
+                CausationId = causationId,
+                PayloadJson = JsonSerializer.Serialize(new { eventId = eventId.ToString() })
             });
             return;
         }
 
-        if (existingNeed.Status is NeedStatus.Detected or NeedStatus.Planning or NeedStatus.Planned or NeedStatus.Executing)
+        existingNeed.UpdateEvaluation(current, 0, NeedSeverity.Low);
+        await _needRepo.UpdateAsync(existingNeed, ct);
+        _eventBus.Publish(new EnvironmentUpdatedEvent
         {
-            existingNeed.UpdateEvaluation(current, 0, NeedSeverity.Low);
-            await _needRepo.UpdateAsync(existingNeed, ct);
-            _eventBus.Publish(new EnvironmentUpdatedEvent
-            {
-                RoomId = roomId,
-                Timestamp = now,
-                EventType = "need.updated",
-                CorrelationId = correlationId,
-                CausationId = causationId
-            });
-        }
+            RoomId = roomId,
+            Timestamp = now,
+            EventType = "need.updated",
+            CorrelationId = correlationId,
+            CausationId = causationId
+        });
     }
 
     private async Task HandleParameterOutOfRangeAsync(RoomId roomId, Guid buildingId, string parameter, double current,
@@ -401,10 +385,14 @@ public class NeedEvaluationService
             var climateResult = await _climateModule.PlanRoomAsync(
                 need.RoomId, "Comfort", ct);
 
-            if (climateResult.Plan?.SubPlans.Any(sp =>
-                sp.CapabilityCode == engCapCode && sp.Priority != "Blocked") == true)
+            var matchingSubPlan = climateResult.Plan?.SubPlans.FirstOrDefault(sp =>
+                sp.CapabilityCode == engCapCode &&
+                sp.Priority != "Blocked" &&
+                !string.IsNullOrWhiteSpace(sp.EngineeringCommandPlanId));
+
+            if (matchingSubPlan is not null)
             {
-                var commandPlanId = climateResult.Plan.PlanId;
+                var commandPlanId = matchingSubPlan.EngineeringCommandPlanId!;
                 need.MarkEngineeringPlanned("climate-orchestrator", engCapCode, commandPlanId);
                 await _needRepo.UpdateAsync(need, ct);
                 await SaveEvaluationAsync(need, trigger, "Planning", "Planned",
@@ -580,7 +568,7 @@ public class NeedEvaluationService
         }
     }
 
-    private static ControlMode FromPolicyMode(string mode) => mode switch
+    private static ControlMode FromPolicyMode(string mode) => mode.Trim().ToLowerInvariant() switch
     {
         "automatic" => ControlMode.Automatic,
         "manual" => ControlMode.Manual,

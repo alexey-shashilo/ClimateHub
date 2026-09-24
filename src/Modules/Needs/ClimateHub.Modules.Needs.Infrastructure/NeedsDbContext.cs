@@ -91,6 +91,13 @@ public class RoomParameterEvaluationStateRepository(NeedsDbContext ctx) : IRoomP
         => await ctx.RoomParameterEvaluationStates.FirstOrDefaultAsync(
             x => x.RoomId == roomId && x.ParameterCode == parameterCode, ct);
 
+    public async Task<IReadOnlyCollection<RoomId>> GetRoomsWithPendingViolationsAsync(CancellationToken ct = default)
+        => await ctx.RoomParameterEvaluationStates
+            .Where(x => x.ViolationSince != null)
+            .Select(x => x.RoomId)
+            .Distinct()
+            .ToListAsync(ct);
+
     public async Task AddAsync(RoomParameterEvaluationState state, CancellationToken ct = default)
     {
         await ctx.RoomParameterEvaluationStates.AddAsync(state, ct);
@@ -134,7 +141,6 @@ public class NeedsRepository(NeedsDbContext ctx) : INeedRepository
             n.Status == NeedStatus.Executing || n.Status == NeedStatus.WaitingForEffect || n.Status == NeedStatus.Blocked)
             .Where(n => n.CooldownUntil == null || n.CooldownUntil <= now)
             .Where(n => n.EffectEvaluationDueAt == null || n.EffectEvaluationDueAt <= now)
-            .Where(n => n.LastEvaluationAt == null || n.LastEvaluationAt <= now.AddMinutes(-2))
             .OrderByDescending(n => n.Severity).Select(n => ToDto(n)).ToListAsync(ct);
     }
 

@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Known non-production JWT key used only by automated tests"
+regexTarget = "match"
+regexes = ['''test-signing-key-that-is-at-least-32-characters-long''']
+paths = ['''^tests/''']
