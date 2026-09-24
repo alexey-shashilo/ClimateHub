@@ -25,6 +25,7 @@ namespace ClimateHub.EndToEndTests;
 
 public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private bool _resourcesDisposed;
     private readonly IContainer _postgresContainer;
     private readonly IContainer _mqttContainer;
     private readonly IContainer _influxDbContainer;
@@ -183,12 +184,24 @@ public class E2eProductionFixture : WebApplicationFactory<Program>, IAsyncLifeti
         return client;
     }
 
-    async Task IAsyncLifetime.DisposeAsync()
+    private async Task DisposeResourcesAsync()
     {
+        if (_resourcesDisposed) return;
+        _resourcesDisposed = true;
+
         await StopGatewayAsync();
         if (AdminMqttClient?.IsConnected == true) await AdminMqttClient.DisconnectAsync();
         AdminMqttClient?.Dispose(); ApiClient?.Dispose();
+        await _influxDbContainer.DisposeAsync();
+        await _mqttContainer.DisposeAsync();
+        await _postgresContainer.DisposeAsync();
     }
 
-    public override async ValueTask DisposeAsync() { await ((IAsyncLifetime)this).DisposeAsync(); }
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await DisposeResourcesAsync();
+    }
+
+    async Task IAsyncLifetime.DisposeAsync() => await DisposeAsync();
 }
