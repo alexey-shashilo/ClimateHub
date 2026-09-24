@@ -385,10 +385,14 @@ public class NeedEvaluationService
             var climateResult = await _climateModule.PlanRoomAsync(
                 need.RoomId, "Comfort", ct);
 
-            if (climateResult.Plan?.SubPlans.Any(sp =>
-                sp.CapabilityCode == engCapCode && sp.Priority != "Blocked") == true)
+            var matchingSubPlan = climateResult.Plan?.SubPlans.FirstOrDefault(sp =>
+                sp.CapabilityCode == engCapCode &&
+                sp.Priority != "Blocked" &&
+                !string.IsNullOrWhiteSpace(sp.EngineeringCommandPlanId));
+
+            if (matchingSubPlan is not null)
             {
-                var commandPlanId = climateResult.Plan.PlanId;
+                var commandPlanId = matchingSubPlan.EngineeringCommandPlanId!;
                 need.MarkEngineeringPlanned("climate-orchestrator", engCapCode, commandPlanId);
                 await _needRepo.UpdateAsync(need, ct);
                 await SaveEvaluationAsync(need, trigger, "Planning", "Planned",
