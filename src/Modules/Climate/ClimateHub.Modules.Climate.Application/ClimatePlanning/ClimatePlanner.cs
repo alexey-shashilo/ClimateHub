@@ -46,6 +46,7 @@ public class ClimatePlanner
 
         var plan = ClimatePlan.Create(goal.Id, goal.BuildingId,
             goal.RoomId, profile);
+        plan.SetPlanning();
 
         // Determine what capabilities are needed based on goal satisfaction
         var requestedCapabilities = new List<string>();
@@ -100,16 +101,19 @@ public class ClimatePlanner
             plan.AddSubPlan(new EngineeringSubPlan(blocked, 0, "Blocked", 99));
         }
 
-        plan.Start();
-
         // Enforce dependency graph validation before returning the plan
         var validationResult = _graphValidator.Validate(plan);
         if (!validationResult.IsValid)
         {
             var errorMessage = string.Join("; ", validationResult.Errors);
-            plan.Fail(ClimateErrors.PlanDependencyCycle, errorMessage);
+            plan.Block(ClimateErrors.PlanDependencyCycle, errorMessage);
             return new ClimatePlanResult(plan, resolution);
         }
+
+        plan.SetPlanned();
+        plan.SetReservingResources();
+        plan.SetReady();
+        plan.Start();
 
         return new ClimatePlanResult(plan, resolution);
     }
